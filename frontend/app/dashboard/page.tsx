@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import useApi from "@/hooks/use-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ChildCardEnhanced, { EnhancedChild } from "@/components/children/child-card-enhanced"
 import { Calendar, Clock, Users, AlertCircle, UserCheck, Stethoscope } from "lucide-react"
@@ -106,6 +107,15 @@ export default function DashboardPage() {
     }
   }, [user, selectedCenter, authLoading, router, fetchAppointments, loadChildren])
 
+  const handleViewProfile = (childId: number) => {
+    router.push(`/children/${childId}/profile`)
+  }
+
+  const handleViewRequests = (childId: number) => {
+    // Navigate to link requests specifically for this child if needed
+    router.push(`/children/link`)
+  }
+
   const upcomingAppointments = useMemo(() => {
     if (!allAppointments) return []
 
@@ -187,13 +197,12 @@ export default function DashboardPage() {
 
         <div className="flex flex-col items-end gap-2">
           <span
-            className={`rounded-full px-2 py-1 text-xs font-medium ${
-              appointment.EstadoCita === "Confirmada"
-                ? "bg-green-100 text-green-800"
-                : appointment.EstadoCita === "Agendada"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-primary/10 text-primary"
-            }`}
+            className={`rounded-full px-2 py-1 text-xs font-medium ${appointment.EstadoCita === "Confirmada"
+              ? "bg-green-100 text-green-800"
+              : appointment.EstadoCita === "Agendada"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-primary/10 text-primary"
+              }`}
           >
             {appointment.EstadoCita}
           </span>
@@ -218,8 +227,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container py-10">
-      <h1 className="mb-6 text-3xl font-bold">Bienvenido, {user.email}</h1>
+    <div className="container py-10 px-4 md:px-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+            Bienvenido, <span className="text-primary">{(user as any).nombre || user.email}</span>
+          </h1>
+          <p className="text-muted-foreground mt-1">Gestione sus citas y registros de salud en un solo lugar.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="px-4 py-1.5 text-sm font-semibold border-primary/20 bg-primary/5 text-primary">
+            Modo: {user.role}
+          </Badge>
+        </div>
+      </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
@@ -290,8 +311,8 @@ export default function DashboardPage() {
                   ) : upcomingAppointments.length > 0 ? (
                     <div className="space-y-4">
                       {upcomingAppointments.map((appointment) => (
-                          <AppointmentCard key={appointment.id_Cita} appointment={appointment} />
-                        ))}
+                        <AppointmentCard key={appointment.id_Cita} appointment={appointment} />
+                      ))}
                     </div>
                   ) : (
                     <div className="flex h-40 flex-col items-center justify-center space-y-3">
@@ -311,8 +332,8 @@ export default function DashboardPage() {
                   ) : attendedAppointments.length > 0 ? (
                     <div className="space-y-4">
                       {attendedAppointments.map((appointment) => (
-                          <AppointmentCard key={appointment.id_Cita} appointment={appointment} />
-                        ))}
+                        <AppointmentCard key={appointment.id_Cita} appointment={appointment} />
+                      ))}
                     </div>
                   ) : (
                     <div className="flex h-40 items-center justify-center text-muted-foreground">
@@ -391,13 +412,12 @@ export default function DashboardPage() {
 
                       <div className="flex items-center gap-2">
                         <span
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${
-                            appointment.EstadoCita === "Confirmada"
-                              ? "bg-green-100 text-green-800"
-                              : appointment.EstadoCita === "Agendada"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-primary/10 text-primary"
-                          }`}
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${appointment.EstadoCita === "Confirmada"
+                            ? "bg-green-100 text-green-800"
+                            : appointment.EstadoCita === "Agendada"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-primary/10 text-primary"
+                            }`}
                         >
                           {appointment.EstadoCita}
                         </span>
@@ -436,7 +456,12 @@ export default function DashboardPage() {
                 {children.length > 0 ? (
                   <div className="space-y-4">
                     {children.map((child) => (
-                      <ChildCardEnhanced key={child.id_Nino} child={child} />
+                      <ChildCardEnhanced
+                        key={child.id_Nino}
+                        child={child}
+                        onViewProfile={handleViewProfile}
+                        onViewRequests={handleViewRequests}
+                      />
                     ))}
                   </div>
                 ) : (

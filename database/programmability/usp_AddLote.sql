@@ -8,7 +8,6 @@ CREATE PROCEDURE usp_AddLote
     @id_CentroVacunacion INT,
     @NumeroLote NVARCHAR(100),
     @FechaCaducidad DATE,
-    @FechaRecepcion DATE,
     @CantidadInicial INT
 AS
 BEGIN
@@ -17,7 +16,7 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Validaciones básicas
-    IF @id_VacunaCatalogo IS NULL OR @id_CentroVacunacion IS NULL OR @NumeroLote IS NULL OR @FechaCaducidad IS NULL OR @FechaRecepcion IS NULL OR @CantidadInicial IS NULL
+    IF @id_VacunaCatalogo IS NULL OR @id_CentroVacunacion IS NULL OR @NumeroLote IS NULL OR @CantidadInicial IS NULL
     BEGIN
         RAISERROR('Todos los parámetros son obligatorios.', 16, 1);
         RETURN;
@@ -48,20 +47,16 @@ BEGIN
         id_CentroVacunacion,
         NumeroLote,
         FechaCaducidad,
-        FechaRecepcion,
         CantidadInicial,
-        CantidadDisponible,
-        Activo
+        CantidadDisponible
     )
     VALUES (
         @id_VacunaCatalogo,
         @id_CentroVacunacion,
         @NumeroLote,
         @FechaCaducidad,
-        @FechaRecepcion,
         @CantidadInicial,
-        @CantidadInicial, -- La cantidad disponible es igual a la inicial al registrar
-        1 -- El lote se registra como activo por defecto
+        @CantidadInicial -- La cantidad disponible es igual a la inicial al registrar
     );
 
     -- Opcional: Devolver el ID del lote recién creado

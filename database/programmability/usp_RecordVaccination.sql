@@ -103,25 +103,34 @@ BEGIN
         DECLARE @New_id_Historico INT;
 
         INSERT INTO dbo.HistoricoVacunas (
-            id_Nino,
-            id_Tutor,
-            id_Cita,
-            FechaUltimaAplicacion,
-            FirmaDigital,
-            NotasAdicionales,
-            Alergias,
-            FechaCreacion
-        )
-        VALUES (
-            @id_Nino,
-            @id_Tutor,
-            @id_Cita,
-            @FechaAplicacion,
-            NULL, -- No digital signature captured by this SP
-            @NotasAdicionales,
-            @Alergias,
-            GETDATE()
-        );
+    id_Nino,
+    id_Cita,
+    FechaAplicacion,
+    DosisAplicada,
+    EdadAlMomento,
+    VacunaNombre,
+    FabricanteNombre,
+    LoteNumero,
+    PersonalSaludNombre,
+    FirmaDigital,
+    NotasAdicionales,
+    Alergias
+)
+VALUES (
+    @id_Nino,
+    @id_Cita,
+    @FechaAplicacion,
+    @DosisAplicada,
+    @EdadAlMomento,
+    @VacunaNombre,
+    @FabricanteNombre,
+    @LoteNumero,
+    @NombreCompletoPersonalAplicado,
+    NULL,
+    @NotasAdicionales,
+    @Alergias
+);
+
 
         SET @New_id_Historico = SCOPE_IDENTITY();
 

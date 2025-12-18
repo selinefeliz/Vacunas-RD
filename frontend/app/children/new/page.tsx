@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function NewChildPage() {
@@ -74,9 +74,20 @@ export default function NewChildPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
-      <Card className="w-full max-w-2xl">
+    <div className="flex justify-center items-center min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-slate-950 p-4 md:p-8">
+      <Card className="w-full max-w-2xl border-gray-200 dark:border-gray-800 shadow-lg">
         <CardHeader>
+          <div className="flex items-center justify-between mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="flex items-center text-gray-600 hover:text-green-600 transition-colors"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver
+            </Button>
+          </div>
           <CardTitle>Registrar Nuevo Niño</CardTitle>
           <CardDescription>Complete el formulario para registrar un niño bajo su tutela.</CardDescription>
         </CardHeader>

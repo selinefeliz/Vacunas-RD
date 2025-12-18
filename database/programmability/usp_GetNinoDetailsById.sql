@@ -23,13 +23,12 @@ BEGIN
 
     SELECT 
         n.id_Nino,
-        n.Nombres AS NinoNombres,
-        
-        n.Apellidos AS NinoApellidos,
+        n.Nombres,
+        n.Apellidos,
         n.FechaNacimiento,
         dbo.fn_CalculateAge(n.FechaNacimiento, GETDATE()) AS EdadActual,
-        n.Genero AS NinoGenero,
-        n.CodigoIdentificacionPropio AS NinoCodigoIdentificacion,
+        n.Genero,
+        n.CodigoIdentificacionPropio AS CodigoIdentificacion,
         n.id_Usuario AS Nino_id_Usuario, -- Child's own user account ID, if any
         u_nino.Email AS NinoEmail, -- Child's own user account email, if any
         t.id_Tutor,

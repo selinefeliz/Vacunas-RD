@@ -73,6 +73,17 @@ CREATE TABLE Usuario (
     CONSTRAINT FK_Usuario_CentroVacunacion FOREIGN KEY (id_CentroVacunacion) REFERENCES CentroVacunacion(id_CentroVacunacion) ON DELETE SET NULL
 );
 GO
+IF COL_LENGTH('dbo.Usuario','Nombre') IS NULL
+BEGIN
+    ALTER TABLE dbo.Usuario
+    ADD Nombre NVARCHAR(100) NULL;
+END;
+
+IF COL_LENGTH('dbo.Usuario','Apellido') IS NULL
+BEGIN
+    ALTER TABLE dbo.Usuario
+    ADD Apellido NVARCHAR(100) NULL;
+END;
 
 -- Table: Tutor
 CREATE TABLE Tutor (
@@ -99,6 +110,42 @@ CREATE TABLE CentroVacunacion (
     Web NVARCHAR(100)
 );
 GO
+-- Created by GitHub Copilot in SSMS - review carefully before executing
+
+/* Add missing columns referenced by usp_CreateVaccinationCenter.
+   Columns are added as NULL to avoid breaking existing data/logic.
+   FK constraints are NOT created because referenced objects (Estado/Provincia/Municipio)
+   do not exist in dbo. If they exist in another schema/database, add FKs manually. */
+
+IF COL_LENGTH('dbo.CentroVacunacion','Capacidad') IS NULL
+BEGIN
+    EXEC sp_executesql N'ALTER TABLE dbo.CentroVacunacion ADD Capacidad INT NULL;';
+END;
+
+IF NOT EXISTS(
+    SELECT 1 FROM sys.check_constraints cc
+    WHERE cc.parent_object_id = OBJECT_ID('dbo.CentroVacunacion')
+      AND cc.name = 'CK_CentroVacunacion_Capacidad'
+)
+AND EXISTS(SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.CentroVacunacion') AND name = 'Capacidad')
+BEGIN
+    EXEC sp_executesql N'ALTER TABLE dbo.CentroVacunacion ADD CONSTRAINT CK_CentroVacunacion_Capacidad CHECK (Capacidad >= 0);';
+END;
+
+IF COL_LENGTH('dbo.CentroVacunacion','id_Estado') IS NULL
+BEGIN
+    EXEC sp_executesql N'ALTER TABLE dbo.CentroVacunacion ADD id_Estado INT NULL;';
+END;
+
+IF COL_LENGTH('dbo.CentroVacunacion','id_Provincia') IS NULL
+BEGIN
+    EXEC sp_executesql N'ALTER TABLE dbo.CentroVacunacion ADD id_Provincia INT NULL;';
+END;
+
+IF COL_LENGTH('dbo.CentroVacunacion','id_Municipio') IS NULL
+BEGIN
+    EXEC sp_executesql N'ALTER TABLE dbo.CentroVacunacion ADD id_Municipio INT NULL;';
+END;
 
 -- Table: Nino (Child) - Changed from Niño
 CREATE TABLE Nino (
@@ -186,6 +233,12 @@ CREATE TABLE CitaVacunacion (
     CONSTRAINT FK_CitaVacunacion_Lote FOREIGN KEY (id_LoteAplicado) REFERENCES Lote(id_LoteVacuna) ON DELETE SET NULL
 );
 GO
+-- Created by GitHub Copilot in SSMS - review carefully before executing
+IF COL_LENGTH('dbo.CitaVacunacion','FechaCreacion') IS NULL
+BEGIN
+    ALTER TABLE dbo.CitaVacunacion
+    ADD FechaCreacion DATETIME2 NULL;
+END;
 
 -- Table: HistoricoVacunas (Vaccination History)
 CREATE TABLE HistoricoVacunas (

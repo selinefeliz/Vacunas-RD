@@ -39,7 +39,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-            const response = await fetch("http://localhost:3001/api/tutors", {
+      const response = await fetch("http://localhost:3001/api/tutors", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,6 +77,28 @@ export default function RegisterPage() {
           <CardDescription>Ingrese sus datos personales para registrarse en el sistema</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="TipoIdentificacion">Tipo de Identificación</Label>
+              <Input
+                id="TipoIdentificacion"
+                name="TipoIdentificacion"
+                value={formData.TipoIdentificacion}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="NumeroIdentificacion">Número de Identificación</Label>
+              <Input
+                id="NumeroIdentificacion"
+                name="NumeroIdentificacion"
+                value={formData.NumeroIdentificacion}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -86,28 +108,6 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="Apellidos">Apellidos</Label>
                 <Input id="Apellidos" name="Apellidos" value={formData.Apellidos} onChange={handleChange} required />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="TipoIdentificacion">Tipo de Identificación</Label>
-                <Input
-                  id="TipoIdentificacion"
-                  name="TipoIdentificacion"
-                  value={formData.TipoIdentificacion}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="NumeroIdentificacion">Número de Identificación</Label>
-                <Input
-                  id="NumeroIdentificacion"
-                  name="NumeroIdentificacion"
-                  value={formData.NumeroIdentificacion}
-                  onChange={handleChange}
-                  required
-                />
               </div>
             </div>
             <div className="space-y-2">

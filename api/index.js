@@ -25,6 +25,8 @@ const otherRoutes = require('./routes/other');
 const vaccineCatalogRoutes = require('./routes/vaccineCatalogRoutes'); // Corrected import path
 const manufacturerRoutes = require('./routes/manufacturerRoutes'); // Added this line
 const medicalRoutes = require('./routes/medical'); // Medical routes for healthcare personnel
+const cedulaRoutes = require('./routes/cedula'); // Dominican ID validation Routes
+const territoryRoutes = require('./routes/territories'); // Territorial division Routes
 
 // Initialize Express app
 const app = express();
@@ -56,6 +58,9 @@ app.use((req, res, next) => {
 });
 
 // --- API ROUTES ---
+app.use('/api/cedula', cedulaRoutes);
+app.use('/cedula', cedulaRoutes); // Fallback for direct calls
+app.use('/api/territories', territoryRoutes); // Territorial routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', verifyToken, userRoutes);
 app.use('/api/vaccination-centers', verifyToken, centerRoutes);
@@ -79,25 +84,25 @@ app.get('/', (req, res) => {
 
 // --- Global Error Handler ---
 app.use((err, req, res, next) => {
-    console.error('Global Error Handler caught:', err);
-    if (err.message === 'Not allowed by CORS') {
-        return res.status(403).json({ message: 'Not allowed by CORS' });
-    }
-    res.status(500).json({ message: 'An unexpected error occurred on the server.' });
+  console.error('Global Error Handler caught:', err);
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ message: 'Not allowed by CORS' });
+  }
+  res.status(500).json({ message: 'An unexpected error occurred on the server.' });
 });
 
 // --- Server Initialization ---
 const startServer = async () => {
-    try {
-        // Use the poolPromise from db.js
-        await poolPromise;
-        app.listen(port, () => {
-            console.log(`[SERVER READY] Vaccination API server listening at http://localhost:${port}`);
-        });
-    } catch (err) {
-        console.error('[FATAL ERROR] Failed to connect to SQL Server or start server:', err);
-        process.exit(1); // Exit if DB connection fails
-    }
+  try {
+    // Use the poolPromise from db.js
+    await poolPromise;
+    app.listen(port, () => {
+      console.log(`[SERVER READY] Vaccination API server listening at http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error('[FATAL ERROR] Failed to connect to SQL Server or start server:', err);
+    process.exit(1); // Exit if DB connection fails
+  }
 };
 
 startServer();

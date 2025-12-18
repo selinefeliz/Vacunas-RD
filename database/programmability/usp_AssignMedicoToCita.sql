@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[usp_AssignMedicoToCita]
+CREATE PROCEDURE [dbo].[usp_AssignMedicoToCita]
     @id_Cita INT,
     @id_PersonalSalud INT,
     @id_CentroVacunacion INT,

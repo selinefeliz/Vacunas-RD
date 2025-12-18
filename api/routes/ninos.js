@@ -19,17 +19,17 @@ router.post('/', [verifyToken, checkRole([5, 1])], async (req, res) => {
             console.error('[NINOS] Pool connection is undefined');
             return res.status(500).send({ message: 'Error de conexión a la base de datos.' });
         }
-        
+
         const tutorRequest = pool.request();
         tutorRequest.input('id_Usuario', sql.Int, id_Usuario);
         const tutorResult = await tutorRequest.query('SELECT id_Tutor FROM Tutor WHERE id_Usuario = @id_Usuario');
-        
+
         if (tutorResult.recordset.length === 0) {
             return res.status(400).send({ message: 'Usuario no encontrado como tutor.' });
         }
-        
+
         const id_Tutor = tutorResult.recordset[0].id_Tutor;
-        
+
         const ninoRequest = pool.request();
         ninoRequest.input('id_Tutor', sql.Int, id_Tutor);
         ninoRequest.input('Nombres_Nino', sql.NVarChar(100), Nombres);
@@ -37,13 +37,44 @@ router.post('/', [verifyToken, checkRole([5, 1])], async (req, res) => {
         ninoRequest.input('Genero_Nino', sql.Char(1), Genero);
         ninoRequest.input('FechaNacimiento_Nino', sql.Date, FechaNacimiento);
         ninoRequest.input('DireccionResidencia_Nino', sql.NVarChar(200), DireccionResidencia);
-        
+
         const result = await ninoRequest.execute('usp_RegisterNino');
-        
-        res.status(201).json({ 
-            message: 'Niño registrado exitosamente.', 
-            CodigoActivacion: result.recordset[0].ActivationCode, 
-            data: result.recordset[0] 
+
+        console.log('[NINOS] DB Result received:', JSON.stringify({
+            hasRecordset: !!result.recordset,
+            recordsetLength: result.recordset?.length,
+            hasRecordsets: !!result.recordsets,
+            recordsetsCount: result.recordsets?.length
+        }));
+
+        // Try multiple ways to get the data (Azure sometimes uses recordsets[0])
+        let childData = null;
+        if (result.recordset && result.recordset.length > 0) {
+            childData = result.recordset[0];
+        } else if (result.recordsets && result.recordsets[0] && result.recordsets[0].length > 0) {
+            childData = result.recordsets[0][0];
+        }
+
+        if (!childData) {
+            console.warn('[NINOS] Caution: No child data in result sets. Inspecting output params...', result.output);
+            // Fallback to output parameters if procedure didn't return a recordset
+            if (result.output && result.output.ActivationCode) {
+                childData = { ActivationCode: result.output.ActivationCode };
+            }
+        }
+
+        if (!childData) {
+            console.error('[NINOS] Critical: Failed to retrieve registration data for child.');
+            return res.status(201).json({
+                message: 'Niño registrado (verificar en lista).',
+                CodigoActivacion: 'Disponible en perfil'
+            });
+        }
+
+        res.status(201).json({
+            message: 'Niño registrado exitosamente.',
+            CodigoActivacion: childData.ActivationCode || childData.ActivationCode_Nino || 'Disponible en perfil',
+            data: childData
         });
     } catch (err) {
         console.error('[NINOS] SQL error on POST /api/ninos:', err);
@@ -92,7 +123,7 @@ router.post('/request-link', [verifyToken, checkRole([5, 1])], async (req, res) 
             .input('MensajePersonalizado', sql.NVarChar(500), MensajePersonalizado)
             .execute('usp_SolicitarVinculacion');
 
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'Solicitud de vinculación enviada exitosamente.',
             data: result.recordset[0]
         });
@@ -126,9 +157,9 @@ router.post('/respond-link-request/:requestId', [verifyToken, checkRole([5, 1])]
             .input('Accion', sql.NVarChar(10), action)
             .execute('usp_ResponderSolicitudVinculacion');
 
-        res.status(200).json({ 
+        res.status(200).json({
             message: result.recordset[0].mensaje,
-            success: true 
+            success: true
         });
     } catch (err) {
         console.error('[NINOS] Error on POST /respond-link-request:', err);
@@ -146,7 +177,7 @@ router.get('/tutor/:tutorId/detailed', [verifyToken, checkRole([5, 1])], async (
         if (isNaN(tutorId)) {
             return res.status(400).send({ message: 'ID de tutor inválido.' });
         }
-        
+
         const pool = await connectDB();
         const result = await pool.request()
             .input('id_Usuario', sql.Int, tutorId)
@@ -181,8 +212,8 @@ router.get('/:id/vaccination-schedule', [verifyToken, checkRole([1, 2, 5])], asy
 
     } catch (err) {
         console.error('Error executing usp_CalcularEsquemaVacunacionNino:', err);
-        res.status(500).send({ 
-            message: 'Error fetching vaccination schedule.', 
+        res.status(500).send({
+            message: 'Error fetching vaccination schedule.',
             error: err.message
         });
     }
@@ -207,16 +238,16 @@ router.get('/:ninoId/appointments', [verifyToken, checkRole([1, 2, 5])], async (
 router.get('/:id', [verifyToken, checkRole([1, 2, 5])], async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        
+
         if (isNaN(id)) {
             return res.status(400).send({ message: 'ID de niño inválido.' });
         }
-        
+
         const pool = await connectDB();
         const result = await pool.request()
             .input('id_Nino', sql.Int, id)
             .execute('usp_GetNinoDetailsById');
-        
+
         if (result.recordset.length === 0) {
             return res.status(404).send({ message: 'Nino not found.' });
         }

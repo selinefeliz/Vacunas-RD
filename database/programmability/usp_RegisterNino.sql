@@ -5,6 +5,7 @@ IF OBJECT_ID('dbo.usp_RegisterNino', 'P') IS NOT NULL
 BEGIN
     DROP PROCEDURE dbo.usp_RegisterNino;
 END
+SET QUOTED_IDENTIFIER ON;
 GO
 
 CREATE PROCEDURE dbo.usp_RegisterNino
@@ -27,16 +28,26 @@ CREATE PROCEDURE dbo.usp_RegisterNino
     @Clave_Usuario_Nino NVARCHAR(255) = NULL, -- Hashed password for child's user account
 
     -- Output parameters
-    @OutputMessage NVARCHAR(255) OUTPUT,
-    @New_id_Nino INT OUTPUT,
-    @New_id_Usuario_Nino INT OUTPUT -- Will be NULL if no user account is created for the child
+    @OutputMessage NVARCHAR(255) = NULL OUTPUT,
+    @New_id_Nino INT = NULL OUTPUT,
+    @New_id_Usuario_Nino INT = NULL OUTPUT -- Will be NULL if no user account is created for the child
 AS
 BEGIN
     SET NOCOUNT ON;
     SET @New_id_Usuario_Nino = NULL; -- Initialize output parameter
 
+    -- Generate a default CodigoIdentificacionPropio if none provided (Activation Code)
+    IF @CodigoIdentificacionPropio_Nino IS NULL OR @CodigoIdentificacionPropio_Nino = ''
+    BEGIN
+        SET @CodigoIdentificacionPropio_Nino = LEFT(REPLACE(NEWID(), '-', ''), 8);
+    END
+
     DECLARE @id_Rol_Nino INT; -- Assuming a 'Nino' or 'Paciente' role might exist or be added
     DECLARE @id_Estado_Activo INT;
+    DECLARE @id_Usuario_Tutor_Real INT;
+
+    -- Obtener el id_Usuario del tutor para guardarlo en el registro del nino
+    SELECT @id_Usuario_Tutor_Real = id_Usuario FROM dbo.Tutor WHERE id_Tutor = @id_Tutor;
 
     -- Validate Tutor exists
     IF NOT EXISTS (SELECT 1 FROM dbo.Tutor WHERE id_Tutor = @id_Tutor)
@@ -110,12 +121,12 @@ BEGIN
         -- Insert into Nino table
         INSERT INTO dbo.Nino (
             id_Usuario, Nombres, Apellidos, FechaNacimiento, Genero, 
-            Email, DireccionResidencia, CodigoIdentificacionPropio, PaisNacimiento, id_CentroSaludAsignado
+            Email, DireccionResidencia, CodigoIdentificacionPropio, PaisNacimiento, id_CentroSaludAsignado, id_Usuario_Tutor
         )
         VALUES (
             @New_id_Usuario_Nino, -- This will be NULL if no user account was created for the child
             @Nombres_Nino, @Apellidos_Nino, @FechaNacimiento_Nino, @Genero_Nino, 
-            @Email_Nino, @DireccionResidencia_Nino, @CodigoIdentificacionPropio_Nino, @PaisNacimiento_Nino, @id_CentroSaludAsignado_Nino
+            @Email_Nino, @DireccionResidencia_Nino, @CodigoIdentificacionPropio_Nino, @PaisNacimiento_Nino, @id_CentroSaludAsignado_Nino, @id_Usuario_Tutor_Real
         );
 
         SET @New_id_Nino = SCOPE_IDENTITY();
@@ -128,6 +139,11 @@ BEGIN
         SET @OutputMessage = 'Nino registered successfully. Nino ID: ' + CAST(@New_id_Nino AS NVARCHAR(10)) +
                              ISNULL(', User Account ID: ' + CAST(@New_id_Usuario_Nino AS NVARCHAR(10)), '') + '.';
 
+        -- Return the newly created data as a result set for the backend
+        SELECT 
+            @New_id_Nino AS id_Nino, 
+            @New_id_Usuario_Nino AS id_Usuario_Nino, 
+            @CodigoIdentificacionPropio_Nino AS ActivationCode;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0

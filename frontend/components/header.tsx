@@ -47,7 +47,7 @@ export default function Header() {
   }
 
   return (
-    <header className="px-10 sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
+    <header className="px-4 md:px-10 sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-3">
@@ -55,7 +55,7 @@ export default function Header() {
               <Image
                 src={theme === "light" ? "/images/logo-vacunas-rd.jpeg" : "/images/logo-vacunas-rd-dark.jpeg"}
                 alt="VACUNAS RD - Logo oficial"
-                width={40} 
+                width={40}
                 height={40}
                 className="rounded-lg"
               />
@@ -72,31 +72,26 @@ export default function Header() {
                   <>
                     <Link
                       href="/dashboard"
-                      className={`text-sm font-medium transition-colors hover:text-primary ${
-                        pathname === "/dashboard" ? "text-primary" : "text-muted-foreground"
-                      }`}
+                      className={`text-sm font-medium transition-colors hover:text-primary ${pathname === "/dashboard" ? "text-primary" : "text-muted-foreground"
+                        }`}
                     >
                       Dashboard
                     </Link>
 
                     {user.id_Rol === 5 && ( // Tutor
                       <>
-                        <a
-                          href="http://localhost:3003/children"
-                          
-                          
+                        <Link
+                          href="/children"
                           className="text-sm font-medium transition-colors text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
                         >
                           Niños
-                        </a>
-                        <a
-                          href="http://localhost:3003/history"
-                          
-                          
+                        </Link>
+                        <Link
+                          href="/history"
                           className="text-sm font-medium transition-colors text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
                         >
-                          Historico
-                        </a>
+                          Histórico
+                        </Link>
                       </>
                     )}
                   </>

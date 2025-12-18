@@ -65,7 +65,7 @@ BEGIN
         RETURN;
     END
 
-    IF @Fecha < GETDATE()
+    IF @Fecha < CAST(GETDATE() AS DATE)
     BEGIN
         SET @OutputMessage = 'Error: Appointment date cannot be in the past.';
         RAISERROR(@OutputMessage, 16, 1);

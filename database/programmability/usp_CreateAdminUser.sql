@@ -3,12 +3,15 @@
 -- Create date: 2025-06-14
 -- Description: Robustly creates a new user from the admin panel.
 -- =============================================
-CREATE PROCEDURE [dbo].[usp_CreateAdminUser]
+CREATE OR ALTER PROCEDURE [dbo].[usp_CreateAdminUser]
     @id_Rol INT,
     @Cedula_Usuario NVARCHAR(15),
+    @Nombre NVARCHAR(100),
+    @Apellido NVARCHAR(100),
     @Email NVARCHAR(100),
     @Clave NVARCHAR(255), -- Pre-hashed password
-    @id_CentroVacunacion INT = NULL
+    @id_CentroVacunacion INT = NULL,
+    @additionalCenters [dbo].[MedicoCentrosType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -41,25 +44,28 @@ BEGIN
         RETURN;
     END
 
-    -- 5. Business Rule: if role is NOT 'Personal', center must be NULL.
-    IF @id_Rol != 6 AND @id_CentroVacunacion IS NOT NULL
-    BEGIN
-        RAISERROR('A Vaccination Center cannot be assigned for this user role.', 16, 1);
-        RETURN;
-    END
-
-    -- 6. Validate Foreign Key: id_CentroVacunacion (only if it's not null)
+    -- 5. Validate Foreign Key: id_CentroVacunacion (only if it's not null)
     IF @id_CentroVacunacion IS NOT NULL AND NOT EXISTS (SELECT 1 FROM CentroVacunacion WHERE id_CentroVacunacion = @id_CentroVacunacion)
     BEGIN
-        RAISERROR('The specified Vaccination Center ID does not exist.', 16, 1);
+        RAISERROR('The specified Primary Vaccination Center ID does not exist.', 16, 1);
         RETURN;
     END
 
     -- All checks passed, proceed with insert
-    INSERT INTO Usuario (id_Rol, id_Estado, Cedula_Usuario, Email, Clave, id_CentroVacunacion)
-    VALUES (@id_Rol, 1, @Cedula_Usuario, @Email, @Clave, @id_CentroVacunacion); -- Default state 1 = 'Activo'
+    INSERT INTO Usuario (id_Rol, id_Estado, Cedula_Usuario, Email, Clave, id_CentroVacunacion, Nombre, Apellido)
+    VALUES (@id_Rol, 1, @Cedula_Usuario, @Email, @Clave, @id_CentroVacunacion, @Nombre, @Apellido); -- Default state 1 = 'Activo'
+
+    DECLARE @newUserId INT = SCOPE_IDENTITY();
+
+    -- Handle additional centers if they exist (for Medico role usually)
+    IF EXISTS (SELECT 1 FROM @additionalCenters)
+    BEGIN
+        INSERT INTO UsuarioCentro (id_Usuario, id_Centro)
+        SELECT @newUserId, id_Centro
+        FROM @additionalCenters;
+    END
 
     -- Return the ID of the newly created user
-    SELECT SCOPE_IDENTITY() AS id_Usuario;
+    SELECT @newUserId AS id_Usuario;
 END
 GO

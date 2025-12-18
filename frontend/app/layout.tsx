@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "Sistema de Vacunación",
   description: "Sistema de gestión de vacunación para usuarios y tutores",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -21,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-        <html lang="es" suppressHydrationWarning>
-            <body className={inter.className}>
+    <html lang="es" suppressHydrationWarning>
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -32,7 +32,7 @@ export default function RootLayout({
           <AuthProvider>
             <div className="flex min-h-screen flex-col">
               <Header />
-              <main className="flex-1">{children}</main>
+              <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">{children}</main>
               <Footer />
             </div>
             <Toaster />

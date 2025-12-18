@@ -18,7 +18,7 @@ export default function UsersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { data: users, loading: isLoading, error, request: fetchUsers } = useApi<User[]>()
 
-    useEffect(() => {
+  useEffect(() => {
     fetchUsers("/api/users")
   }, [fetchUsers])
 
@@ -38,9 +38,9 @@ export default function UsersPage() {
               </DialogDescription>
             </DialogHeader>
             <AddAdminUserForm onSuccess={() => {
-                setIsDialogOpen(false);
-                fetchUsers("/api/users");
-              }} />
+              setIsDialogOpen(false);
+              fetchUsers("/api/users");
+            }} />
           </DialogContent>
         </Dialog>
       </div>
@@ -61,11 +61,16 @@ export default function UsersPage() {
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {users.map((user) => (
-                <tr key={user.id_Usuario}>
-                  <td className="whitespace-nowrap px-6 py-4">{user.id_Usuario}</td>
-                  <td className="whitespace-nowrap px-6 py-4">{user.Email}</td>
-                  <td className="whitespace-nowrap px-6 py-4">{user.NombreRol}</td>
-                  <td className="whitespace-nowrap px-6 py-4">{user.Estado}</td>
+                <tr key={user.id_Usuario} className="hover:bg-gray-50 transition-colors">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{user.id_Usuario}</td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{user.Email}</td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{user.NombreRol}</td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.Estado === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                      {user.Estado}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

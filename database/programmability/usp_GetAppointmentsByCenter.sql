@@ -1,4 +1,4 @@
-USE Vaccine;
+-- Removed USE Vaccine;
 GO
 
 CREATE OR ALTER PROCEDURE usp_GetAppointmentsByCenter

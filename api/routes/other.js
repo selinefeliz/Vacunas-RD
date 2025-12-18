@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/vaccines', verifyToken, async (req, res) => {
     try {
         const pool = await poolPromise;
-        const result = await pool.request().execute('usp_GetVaccines');
+        const result = await pool.request().execute('usp_GetAllVaccines');
         res.json(result.recordset);
     } catch (err) {
         console.error('SQL error on GET /api/vaccines:', err);
@@ -42,9 +42,10 @@ router.post('/tutors', async (req, res) => {
             .input('Nombres_Tutor', sql.NVarChar(100), Nombres)
             .input('Apellidos_Tutor', sql.NVarChar(100), Apellidos)
             .input('Telefono_Tutor', sql.NVarChar(20), Telefono)
-            .input('Email_Tutor', sql.NVarChar(100), Email) // Using main email for both tutor contact and user login
+            .input('Email_Tutor', sql.NVarChar(100), Email)
             .input('Direccion_Tutor', sql.NVarChar(200), Direccion)
             .input('Email_Usuario', sql.NVarChar(100), Email)
+            .input('Username', sql.NVarChar(100), Username) // Passed to new SP parameter
             .input('Clave_Usuario', sql.NVarChar(255), hashedPassword)
             .output('OutputMessage', sql.NVarChar(255))
             .output('New_id_Usuario', sql.Int)
@@ -80,7 +81,7 @@ router.get('/tutors/:userId/children', [verifyToken, checkRole([1, 5])], async (
         // First, find the id_Tutor from the id_Usuario (userId)
         const tutorResult = await pool.request()
             .input('id_Usuario', sql.Int, userId)
-            .query('SELECT id_Tutor FROM Tutores WHERE id_Usuario = @id_Usuario');
+            .query('SELECT id_Tutor FROM Tutor WHERE id_Usuario = @id_Usuario');
 
         if (tutorResult.recordset.length === 0) {
             return res.status(404).send({ message: 'Tutor not found for the given user ID.' });
@@ -91,7 +92,7 @@ router.get('/tutors/:userId/children', [verifyToken, checkRole([1, 5])], async (
         // Now, get the children using the correct id_Tutor
         const childrenResult = await pool.request()
             .input('id_Tutor', sql.Int, tutorId)
-            .execute('usp_GetNinosByTutorId');
+            .execute('usp_GetNinosByTutor');
 
         res.json(childrenResult.recordset);
 

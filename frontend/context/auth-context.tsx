@@ -77,11 +77,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('[AuthContext] User object received in login:', JSON.stringify(newUser, null, 2));
 
     if (newUser.id_Rol === 1) { // Role ID for 'Administrador'
-      router.push('/login');
+      router.push('/admin');
     } else if (newUser.id_Rol === 2) { // Role ID for 'Médico'
-      router.push('/management/medical/select-center');
-    } else if (newUser.id_Rol === 6) { // Role ID for 'Tutor'
-      router.push('/management/availability');
+      router.push('/medical/select-center');
+    } else if (newUser.id_Rol === 5) { // Role ID for 'Tutor'
+      router.push('/dashboard');
     } else {
       router.push('/dashboard');
     }

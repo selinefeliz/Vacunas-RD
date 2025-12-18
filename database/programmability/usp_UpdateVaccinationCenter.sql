@@ -6,8 +6,8 @@ ALTER PROCEDURE [dbo].[usp_UpdateVaccinationCenter]
     @id_CentroVacunacion INT,
     @NombreCentro NVARCHAR(100),
     @Direccion NVARCHAR(200),
-    @id_Provincia INT,
-    @id_Municipio INT,
+    @id_Provincia NVARCHAR(10), -- Changed from INT but kept name for compatibility
+    @id_Municipio NVARCHAR(10), -- Changed from INT but kept name for compatibility
     @Telefono NVARCHAR(20),
     @Director NVARCHAR(100),
     @Web NVARCHAR(100),
@@ -17,12 +17,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @real_id_Provincia INT;
+    DECLARE @real_id_Municipio INT;
+
+    -- Resolve ids from codes
+    SELECT @real_id_Provincia = id_Provincia FROM Provincia WHERE CodigoONE = @id_Provincia;
+    SELECT @real_id_Municipio = id_Municipio FROM Municipio WHERE CodigoONE = @id_Municipio AND id_Provincia = @real_id_Provincia;
+
     UPDATE CentroVacunacion
     SET
         NombreCentro = @NombreCentro,
         Direccion = @Direccion,
-        id_Provincia = @id_Provincia,
-        id_Municipio = @id_Municipio,
+        id_Provincia = @real_id_Provincia,
+        id_Municipio = @real_id_Municipio,
         Telefono = @Telefono,
         Director = @Director,
         Web = @Web,

@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[usp_GetMedicalAppointments]
+CREATE PROCEDURE [dbo].[usp_GetMedicalAppointments]
     @id_PersonalSalud INT,
     @id_CentroVacunacion INT
 AS

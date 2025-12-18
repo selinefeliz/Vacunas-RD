@@ -4,9 +4,9 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT
-        (SELECT COUNT(*) FROM Usuario) AS TotalUsers,
-        (SELECT COUNT(*) FROM Vacuna) AS TotalVaccines,
-        (SELECT COUNT(*) FROM CentroVacunacion) AS TotalCenters,
-        (SELECT COUNT(*) FROM CitaVacunacion WHERE id_EstadoCita = (SELECT id_Estado FROM EstadoCita WHERE Estado = 'Programada')) AS TotalScheduledAppointments;
+        (SELECT COUNT(*) FROM Nino) AS totalPatients,
+        (SELECT COUNT(*) FROM CitaVacunacion WHERE Fecha = CAST(GETDATE() AS DATE)) AS todayAppointments,
+        (SELECT COUNT(*) FROM HistoricoVacunas) AS completedVaccinations,
+        (SELECT COUNT(*) FROM Lote WHERE CantidadDisponible < 50) AS pendingAlerts;
 END
 GO

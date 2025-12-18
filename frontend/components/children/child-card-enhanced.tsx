@@ -4,12 +4,12 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  Calendar, 
-  User, 
-  MapPin, 
-  Syringe, 
-  Bell, 
+import {
+  Calendar,
+  User,
+  MapPin,
+  Syringe,
+  Bell,
   Share2,
   QrCode,
   Clock,
@@ -48,7 +48,14 @@ interface ChildCardEnhancedProps {
 
 export default function ChildCardEnhanced({ child, onViewProfile, onViewRequests }: ChildCardEnhancedProps) {
   const [showCode, setShowCode] = useState(false)
-  
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(child.CodigoActivacion)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A'
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -69,23 +76,25 @@ export default function ChildCardEnhanced({ child, onViewProfile, onViewRequests
   }
 
   return (
-    <Card className="w-full hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
-      <CardHeader className="pb-3">
+    <Card className="w-full hover:shadow-xl transition-all duration-300 border-none overflow-hidden rounded-xl shadow-md">
+      <CardHeader className="pb-4 bg-gradient-to-r from-primary to-blue-600">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{getGenderIcon(child.Genero)}</span>
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+              <span className="text-2xl">{getGenderIcon(child.Genero)}</span>
+            </div>
             <div>
-              <CardTitle className="text-lg font-semibold text-gray-900">
+              <CardTitle className="text-xl font-extrabold text-white tracking-tight">
                 {child.Nombres} {child.Apellidos}
               </CardTitle>
-              <p className="text-sm text-gray-500 flex items-center gap-1">
+              <p className="text-sm text-blue-50 flex items-center gap-1 font-medium">
                 <Calendar className="h-3 w-3" />
                 {getAgeText(child.EdadActual)} • {formatDate(child.FechaNacimiento)}
               </p>
             </div>
           </div>
           {child.SolicitudesPendientes > 0 && (
-            <Badge variant="destructive" className="flex items-center gap-1">
+            <Badge variant="destructive" className="flex items-center gap-1 border-white/20 shadow-sm animate-bounce">
               <Bell className="h-3 w-3" />
               {child.SolicitudesPendientes}
             </Badge>
@@ -143,7 +152,7 @@ export default function ChildCardEnhanced({ child, onViewProfile, onViewRequests
             </Button>
           </div>
           {showCode && (
-            <div className="font-mono text-lg bg-white p-2 rounded border text-center tracking-wider">
+            <div className="font-mono text-lg bg-white p-2 rounded border text-center tracking-wider text-black font-bold">
               {child.CodigoActivacion}
             </div>
           )}
@@ -162,7 +171,7 @@ export default function ChildCardEnhanced({ child, onViewProfile, onViewRequests
             <User className="h-4 w-4 mr-1" />
             Ver Perfil
           </Button>
-          
+
           {child.SolicitudesPendientes > 0 && (
             <Button
               variant="default"
@@ -172,15 +181,15 @@ export default function ChildCardEnhanced({ child, onViewProfile, onViewRequests
             >
               <Bell className="h-4 w-4 mr-1" />
               Solicitudes
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs"
               >
                 {child.SolicitudesPendientes}
               </Badge>
             </Button>
           )}
-          
+
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -196,20 +205,24 @@ export default function ChildCardEnhanced({ child, onViewProfile, onViewRequests
               </DialogHeader>
               <div className="flex items-center space-x-2">
                 <div className="grid flex-1 gap-2">
-                  <div className="font-mono text-xl bg-gray-100 p-4 rounded text-center tracking-wider">
+                  <div className="font-mono text-2xl bg-white p-6 rounded border text-center tracking-widest text-black font-bold shadow-inner">
                     {child.CodigoActivacion}
                   </div>
+                  {copied && (
+                    <p className="text-center text-sm font-bold text-green-600 animate-in fade-in slide-in-from-top-1">
+                      ¡Código copiado al portapapeles!
+                    </p>
+                  )}
                 </div>
               </div>
               <DialogFooter className="sm:justify-start">
                 <Button
                   type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    navigator.clipboard.writeText(child.CodigoActivacion)
-                  }}
+                  variant={copied ? "default" : "secondary"}
+                  onClick={handleCopy}
+                  className="flex-1"
                 >
-                  Copiar Código
+                  {copied ? "¡Copiado!" : "Copiar Código"}
                 </Button>
               </DialogFooter>
             </DialogContent>

@@ -18,14 +18,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/components/ui/use-toast"
 
-import { Shield, Eye, EyeOff, ArrowLeft, User, Mail, Phone, Calendar, MapPin, Loader2, Home, KeyRound } from "lucide-react" // Added Home for Direccion, KeyRound for Username (or User again)
+import { Shield, Eye, EyeOff, ArrowLeft, User, Mail, Phone, Calendar, MapPin, Loader2, Home, KeyRound, CheckCircle2, AlertCircle } from "lucide-react"
+import { formatearCedula, validarCedulaEnAPI, type ValidationResult } from "@/lib/cedula-utils"
 
 export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false) // Used for login password visibility
   const [showRegisterPassword, setShowRegisterPassword] = useState(false) // For register form password
   const [showConfirmPassword, setShowConfirmPassword] = useState(false) // For register form confirm password
-  
-  const [isRegisterLoading, setIsRegisterLoading] = useState(false) 
+
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false)
   const { theme } = useTheme()
   const { toast } = useToast()
 
@@ -35,13 +36,15 @@ export default function AuthPage() {
   const [loginIdentifier, setLoginIdentifier] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [loginError, setLoginError] = useState("")
-  const [isAdmin, setIsAdmin] = useState(false) // For potential admin-specific logic
+  const [registrationError, setRegistrationError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false); // For potential admin-specific logic
 
   // Register specific states
   const [registerFormData, setRegisterFormData] = useState({
+    NumeroIdentificacion: "", // Mapped from 'Cédula' in UI
     Nombres: "",
     Apellidos: "",
-    NumeroIdentificacion: "", // Mapped from 'Cédula' in UI
     Telefono: "",
     Direccion: "",
     Email: "",
@@ -51,17 +54,21 @@ export default function AuthPage() {
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("")
   const [registerError, setRegisterError] = useState("")
 
+  // Estados para validación de cédula
+  const [cedulaValidation, setCedulaValidation] = useState<ValidationResult | null>(null)
+  const [isValidatingCedula, setIsValidatingCedula] = useState(false)
+
   useEffect(() => {
     // If the user is already authenticated, redirect them based on their role.
     if (user && !authLoading) {
       if (user.id_Rol === 1) { // Administrador
         setIsAdmin(true); // Set admin state
         // Redirect to the admin role selection page which is at /login
-        router.push('/login'); 
+        router.push('/login');
       } else if (user.id_Rol === 2) { // 'Médico'
         router.push('/management/medical/select-center');
       } else if (user.id_Rol === 6) { // 'Tutor'
-        router.push('/dashboard'); 
+        router.push('/dashboard');
       } else {
         router.push('/dashboard'); // Default dashboard for other authenticated users
       }
@@ -73,10 +80,82 @@ export default function AuthPage() {
     setRegisterFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Manejar cambio de cédula con validación
+  const handleCedulaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = e.target.value;
+
+    // Formatear automáticamente
+    const cedulaFormateada = formatearCedula(valor);
+
+    setRegisterFormData(prev => ({
+      ...prev,
+      NumeroIdentificacion: cedulaFormateada
+    }));
+
+    // Resetear validación si el usuario está editando
+    if (cedulaFormateada.length < 13) {
+      setCedulaValidation(null);
+      return;
+    }
+
+    // Si tiene 13 caracteres (formato completo), validar
+    if (cedulaFormateada.length === 13) {
+      setIsValidatingCedula(true);
+      try {
+        const result = await validarCedulaEnAPI(cedulaFormateada);
+        setCedulaValidation(result);
+
+        if (result.valid) {
+          toast({
+            title: "Cédula válida",
+            description: "Cédula verificada en el Registro Civil",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Cédula inválida",
+            description: result.message,
+          });
+        }
+      } catch (error: any) {
+        setCedulaValidation({
+          valid: false,
+          message: error.message,
+          localValidation: false,
+          apiError: true,
+        });
+      } finally {
+        setIsValidatingCedula(false);
+      }
+    }
+  };
+
+  // Manejar cambio en identificador de login (Cédula o Email)
+  const handleLoginIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Si empieza con números y no parece un email, formatear como cédula
+    if ((/^\d/.test(value) && !value.includes("@")) || (value.includes("-") && !value.includes("@"))) {
+      setLoginIdentifier(formatearCedula(value));
+    } else {
+      setLoginIdentifier(value);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
-    // Auth context's 'authLoading' will be used for button's disabled state
+
+    // Validación básica antes de enviar
+    const isEmail = loginIdentifier.includes("@");
+    const cedulaLimpia = loginIdentifier.replace(/-/g, "");
+
+    if (!isEmail && cedulaLimpia.length !== 11) {
+      setLoginError("Por favor ingrese una cédula válida (11 dígitos) o un correo electrónico.");
+      return;
+    }
+
+    setIsAdmin(false); // Auth context's 'authLoading' will be used for button's disabled state
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -102,6 +181,18 @@ export default function AuthPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError("");
+
+    // Validar cédula antes de enviar
+    if (!cedulaValidation || !cedulaValidation.valid) {
+      setRegisterError("Debe ingresar una cédula válida y verificada.");
+      toast({
+        variant: "destructive",
+        title: "Error de validación",
+        description: "La cédula ingresada no es válida",
+      });
+      return;
+    }
+
     if (registerFormData.Password !== registerConfirmPassword) {
       setRegisterError("Las contraseñas no coinciden.");
       return;
@@ -112,7 +203,7 @@ export default function AuthPage() {
       // Add TipoIdentificacion if your backend expects it, defaulting to Cédula
       const payload = {
         ...registerFormData,
-        TipoIdentificacion: "Cédula", 
+        TipoIdentificacion: "Cédula",
       };
 
       const response = await fetch("http://localhost:3001/api/tutors", {
@@ -154,7 +245,7 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
-      {/* Header */} 
+      {/* Header */}
       <header className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -186,7 +277,7 @@ export default function AuthPage() {
         </div>
       </header>
 
-      {/* Main Content */} 
+      {/* Main Content */}
       <main className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[calc(100vh-80px)]">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -219,7 +310,7 @@ export default function AuthPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Login Form */} 
+            {/* Login Form */}
             <TabsContent value="login">
               <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                 <CardHeader>
@@ -235,7 +326,11 @@ export default function AuthPage() {
                         Cédula de Identidad
                       </Label>
                       <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        {loginIdentifier.includes("@") ? (
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        )}
                         <Input
                           id="login-cedula"
                           type="text"
@@ -243,7 +338,7 @@ export default function AuthPage() {
                           className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-green-500"
                           required
                           value={loginIdentifier}
-                          onChange={(e) => setLoginIdentifier(e.target.value)}
+                          onChange={handleLoginIdentifierChange}
                         />
                       </div>
                     </div>
@@ -290,7 +385,7 @@ export default function AuthPage() {
                       </Link>
                     </div>
 
-                                        {loginError && (
+                    {loginError && (
                       <p className="text-sm text-red-600 dark:text-red-400 text-center">{loginError}</p>
                     )}
                     <Button
@@ -309,7 +404,7 @@ export default function AuthPage() {
               </Card>
             </TabsContent>
 
-            {/* Register Form */} 
+            {/* Register Form */}
             <TabsContent value="register">
               <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                 <CardHeader>
@@ -319,7 +414,57 @@ export default function AuthPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {successMessage && (
+                    <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-md text-sm flex items-center">
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      {successMessage}
+                    </div>
+                  )}
                   <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="NumeroIdentificacion" className="text-gray-700 dark:text-gray-300">
+                        Cédula de Identidad *
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="NumeroIdentificacion"
+                          name="NumeroIdentificacion"
+                          placeholder="000-0000000-0"
+                          value={registerFormData.NumeroIdentificacion}
+                          onChange={handleCedulaChange}
+                          required
+                          maxLength={13}
+                          className={`pl-10 pr-10 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 ${cedulaValidation
+                            ? cedulaValidation.valid
+                              ? "border-green-500 focus:border-green-500"
+                              : "border-red-500 focus:border-red-500"
+                            : ""
+                            }`}
+                        />
+                        {isValidatingCedula && (
+                          <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-gray-400" />
+                        )}
+                        {!isValidatingCedula && cedulaValidation && (
+                          <>
+                            {cedulaValidation.valid ? (
+                              <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                            ) : (
+                              <AlertCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {cedulaValidation && (
+                        <p className={`text-sm ${cedulaValidation.valid ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                          {cedulaValidation.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Formato: XXX-XXXXXXX-X (11 dígitos). Se verificará en el Registro Civil.
+                      </p>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="Nombres" className="text-gray-700 dark:text-gray-300">Nombres</Label>
@@ -328,14 +473,6 @@ export default function AuthPage() {
                       <div className="space-y-2">
                         <Label htmlFor="Apellidos" className="text-gray-700 dark:text-gray-300">Apellidos</Label>
                         <Input id="Apellidos" name="Apellidos" placeholder="Tus apellidos" value={registerFormData.Apellidos} onChange={handleRegisterChange} required className="bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="NumeroIdentificacion" className="text-gray-700 dark:text-gray-300">Cédula de Identidad</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input id="NumeroIdentificacion" name="NumeroIdentificacion" placeholder="000-0000000-0" value={registerFormData.NumeroIdentificacion} onChange={handleRegisterChange} required className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
                       </div>
                     </div>
 

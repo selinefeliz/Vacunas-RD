@@ -1,62 +1,88 @@
-IF OBJECT_ID('dbo.usp_GetPatientFullHistory', 'P') IS NOT NULL
-    DROP PROCEDURE dbo.usp_GetPatientFullHistory;
-GO
-
-CREATE PROCEDURE dbo.usp_GetPatientFullHistory
+-- Created by GitHub Copilot in SSMS - review carefully before executing
+CREATE OR ALTER PROCEDURE dbo.usp_GetPatientFullHistory
     @id_Usuario INT,
     @id_Nino INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Determine the correct Tutor ID based on the input user ID
     DECLARE @id_Tutor INT;
-    SELECT @id_Tutor = id_Tutor FROM dbo.Tutor WHERE id_Usuario = @id_Usuario;
+    SELECT TOP(1) @id_Tutor = t.id_Tutor
+    FROM dbo.Tutor t
+    WHERE t.id_Usuario = @id_Usuario;
 
-    -- First, check if a medical history record exists for the given context
+    -- Si no hay historial para el contexto solicitado, devolver conjuntos vacíos con la estructura correcta
     IF NOT EXISTS (
         SELECT 1
         FROM dbo.HistoricoVacunas hv
-        WHERE 
-            (@id_Nino IS NOT NULL AND hv.id_Nino = @id_Nino) OR
-            (@id_Nino IS NULL AND hv.id_Tutor = @id_Tutor)
+        WHERE
+            (@id_Nino IS NOT NULL AND hv.id_Nino = @id_Nino)
+            OR
+            (@id_Nino IS NULL AND hv.id_Nino IN (SELECT tn.id_Nino FROM dbo.TutorNino tn WHERE tn.id_Tutor = @id_Tutor))
     )
     BEGIN
-        -- Return empty result sets with the correct structure to indicate no history
-        SELECT TOP 0 id_Historico, id_Nino, id_Tutor, CAST(NULL AS NVARCHAR(201)) AS NombrePaciente, CAST(NULL AS DATE) AS FechaNacimiento, CAST(NULL AS INT) AS EdadActual, NotasAdicionales, Alergias, FechaCreacion FROM dbo.HistoricoVacunas;
-        SELECT TOP 0 id_Historico, id_Cita, Vacuna, NombreCompletoPersonal, CAST(NULL AS NVARCHAR(50)) as NumeroLote, CentroMedico, Fecha AS FechaAplicacion, Hora AS HoraAplicacion, Notas, CAST(NULL AS DATE) AS FechaCita, CAST(NULL AS TIME) AS HoraCita, CAST(NULL AS INT) AS DosisLimite, CAST(NULL AS BIGINT) AS NumeroDosis FROM dbo.HistoricoCita;
-        RETURN;
-    END
+        SELECT TOP 0
+            id_Historico,
+            id_Nino,
+            CAST(NULL AS INT) AS id_Tutor,
+            CAST(NULL AS NVARCHAR(201)) AS NombrePaciente,
+            CAST(NULL AS DATE) AS FechaNacimiento,
+            CAST(NULL AS INT) AS EdadActual,
+            NotasAdicionales,
+            Alergias,
+            CAST(NULL AS DATETIME2) AS FechaCreacion
+        FROM dbo.HistoricoVacunas;
 
-    -- Get the main medical history record(s)
-    SELECT 
+        SELECT TOP 0
+            id_Historico,
+            id_Cita,
+            Vacuna,
+            NombreCompletoPersonal,
+            CAST(NULL AS NVARCHAR(50)) AS NumeroLote,
+            CentroMedico,
+            Fecha AS FechaAplicacion,
+            Hora AS HoraAplicacion,
+            Notas,
+            CAST(NULL AS DATE) AS FechaCita,
+            CAST(NULL AS TIME) AS HoraCita,
+            CAST(NULL AS INT) AS DosisLimite,
+            CAST(NULL AS BIGINT) AS NumeroDosis
+        FROM dbo.HistoricoCita;
+
+        RETURN;
+    END;
+
+    -- Registros principales de historial médico
+    SELECT
         hv.id_Historico,
         hv.id_Nino,
-        hv.id_Tutor,
+        tn.id_Tutor AS id_Tutor,
         CASE 
-            WHEN @id_Nino IS NOT NULL THEN n.Nombres + ' ' + n.Apellidos
-            ELSE t.Nombres + ' ' + t.Apellidos
+            WHEN @id_Nino IS NOT NULL THEN ISNULL(n.Nombres, '') + CASE WHEN n.Apellidos IS NOT NULL AND n.Apellidos <> '' THEN ' ' + n.Apellidos ELSE '' END
+            ELSE ISNULL(t.Nombres, '') + CASE WHEN t.Apellidos IS NOT NULL AND t.Apellidos <> '' THEN ' ' + t.Apellidos ELSE '' END
         END AS NombrePaciente,
         n.FechaNacimiento,
-        DATEDIFF(YEAR, n.FechaNacimiento, GETDATE()) AS EdadActual,
+        CASE WHEN n.FechaNacimiento IS NOT NULL THEN DATEDIFF(YEAR, n.FechaNacimiento, GETDATE()) ELSE NULL END AS EdadActual,
         hv.NotasAdicionales,
         hv.Alergias,
-        hv.FechaCreacion
+        cv.FechaCreacion AS FechaCreacion
     FROM dbo.HistoricoVacunas hv
     LEFT JOIN dbo.Nino n ON hv.id_Nino = n.id_Nino
-    LEFT JOIN dbo.Tutor t ON hv.id_Tutor = t.id_Tutor
-    WHERE 
-        (@id_Nino IS NOT NULL AND hv.id_Nino = @id_Nino) OR
-        (@id_Nino IS NULL AND hv.id_Tutor = @id_Tutor);
+    LEFT JOIN dbo.TutorNino tn ON hv.id_Nino = tn.id_Nino
+    LEFT JOIN dbo.Tutor t ON tn.id_Tutor = t.id_Tutor
+    LEFT JOIN dbo.CitaVacunacion cv ON hv.id_Cita = cv.id_Cita
+    WHERE
+        (@id_Nino IS NOT NULL AND hv.id_Nino = @id_Nino)
+        OR
+        (@id_Nino IS NULL AND hv.id_Nino IN (SELECT tn2.id_Nino FROM dbo.TutorNino tn2 WHERE tn2.id_Tutor = @id_Tutor));
 
-    -- Get detailed vaccination history
-    SELECT 
+    -- Historial detallado de vacunación
+    SELECT
         hv.id_Historico,
         hc.id_Cita,
         hc.Vacuna,
-        -- Prioritize the manually entered name, but fall back to the user's name from the Usuario table
         ISNULL(cv.NombreCompletoPersonalAplicado, u.Nombre + ' ' + u.Apellido) AS NombreCompletoPersonal,
-        l.NumeroLote, 
+        l.NumeroLote,
         hc.CentroMedico,
         hc.Fecha AS FechaAplicacion,
         hc.Hora AS HoraAplicacion,
@@ -68,12 +94,12 @@ BEGIN
     FROM dbo.HistoricoVacunas hv
     JOIN dbo.HistoricoCita hc ON hv.id_Historico = hc.id_Historico
     JOIN dbo.CitaVacunacion cv ON hc.id_Cita = cv.id_Cita
-    JOIN dbo.Vacuna v ON cv.id_Vacuna = v.id_Vacuna
-    LEFT JOIN dbo.Usuario u ON cv.id_PersonalSalud = u.id_Usuario 
-    LEFT JOIN dbo.Lote l ON cv.id_LoteAplicado = l.id_LoteVacuna 
-    WHERE 
-        (@id_Nino IS NOT NULL AND cv.id_Nino = @id_Nino) OR
-        (@id_Nino IS NULL AND cv.id_Nino IS NULL AND cv.id_UsuarioRegistraCita = @id_Usuario)
+    LEFT JOIN dbo.Vacuna v ON cv.id_Vacuna = v.id_Vacuna
+    LEFT JOIN dbo.Usuario u ON cv.id_PersonalSalud = u.id_Usuario
+    LEFT JOIN dbo.Lote l ON cv.id_LoteAplicado = l.id_LoteVacuna
+    WHERE
+        (@id_Nino IS NOT NULL AND cv.id_Nino = @id_Nino)
+        OR
+        (@id_Nino IS NULL AND cv.id_Nino IN (SELECT tn3.id_Nino FROM dbo.TutorNino tn3 WHERE tn3.id_Tutor = @id_Tutor))
     ORDER BY hc.Fecha DESC, hc.Hora DESC;
-END
-GO
+END;

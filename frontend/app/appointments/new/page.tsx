@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Calendar } from "lucide-react"
+import { Loader2, Calendar, ArrowLeft } from "lucide-react"
 
 interface VaccinationCenter {
   id_CentroVacunacion: number
@@ -45,6 +45,8 @@ export default function NewAppointmentPage() {
     FechaCita: "",
     HoraCita: "",
   })
+  const [schedule, setSchedule] = useState<any[]>([])
+  const [loadingSchedule, setLoadingSchedule] = useState(false)
   const [appointmentFor, setAppointmentFor] = useState<"self" | "child">("self")
 
   const { request: callApi, loading: dataLoading } = useApi()
@@ -57,13 +59,15 @@ export default function NewAppointmentPage() {
         callApi("/api/vaccination-centers", { method: "GET" }),
         callApi("/api/vaccines", { method: "GET" }),
       ])
-      setCenters(centersData || [])
-      setVaccines(vaccinesData || [])
 
-      if (user?.id_Rol === 5) {
+      setCenters(Array.isArray(centersData) ? centersData : (centersData?.recordset || []))
+      setVaccines(Array.isArray(vaccinesData) ? vaccinesData : (vaccinesData?.recordset || []))
+
+      if (user?.id_Rol === 5 || user?.role === "Tutor") {
         // Ajuste de endpoint de niños para tutor actual
-        const childrenData = await callApi(`/api/ninos/tutor/${user.id}/detailed`, { method: "GET" })
-        setChildren(childrenData || [])
+        const data = await callApi(`/api/ninos/tutor/${user.id}/detailed`, { method: "GET" })
+        const childrenList = Array.isArray(data) ? data : (data?.recordset || [])
+        setChildren(childrenList)
       }
     } catch (error) {
       toast({
@@ -92,8 +96,27 @@ export default function NewAppointmentPage() {
     }
   }, [authLoading, user, router, fetchInitialData])
 
+  const fetchChildSchedule = async (childId: string) => {
+    if (!token || !childId) return
+    setLoadingSchedule(true)
+    try {
+      const data = await callApi(`/api/ninos/${childId}/vaccination-schedule`, { method: "GET" })
+      setSchedule(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error("Error fetching schedule:", error)
+      setSchedule([])
+    } finally {
+      setLoadingSchedule(false)
+    }
+  }
+
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (name === "id_Nino") {
+      fetchChildSchedule(value)
+      // Reset vaccine when child changes
+      setFormData((prev) => ({ ...prev, id_Vacuna: "" }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,9 +164,20 @@ export default function NewAppointmentPage() {
   }
 
   return (
-    <div className="container py-10">
-      <Card className="mt-3 mx-auto block">
+    <div className="container py-10 px-4 md:px-0">
+      <Card className="mt-3 mx-auto block max-w-2xl">
         <CardHeader>
+          <div className="flex items-center justify-between mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="flex items-center text-gray-600 dark:text-gray-400 hover:text-green-600 transition-colors"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver
+            </Button>
+          </div>
           <CardTitle>Agendar Nueva Cita</CardTitle>
           <CardDescription>Complete el formulario para agendar una nueva cita de vacunación</CardDescription>
         </CardHeader>
@@ -206,18 +240,49 @@ export default function NewAppointmentPage() {
 
             <div className="space-y-2">
               <Label htmlFor="id_Vacuna">Vacuna</Label>
-              <Select onValueChange={(value) => handleChange("id_Vacuna", value)} value={formData.id_Vacuna} required>
+              <Select
+                onValueChange={(value) => handleChange("id_Vacuna", value)}
+                value={formData.id_Vacuna}
+                required
+                disabled={appointmentFor === "child" && (!formData.id_Nino || loadingSchedule)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccione una vacuna" />
+                  <SelectValue placeholder={
+                    loadingSchedule
+                      ? "Cargando esquema..."
+                      : (appointmentFor === "child" && !formData.id_Nino)
+                        ? "Seleccione un niño primero"
+                        : "Seleccione una vacuna"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
-                  {vaccines?.map((vaccine) => (
-                    <SelectItem key={vaccine.id_Vacuna} value={vaccine.id_Vacuna.toString()}>
-                      {vaccine.Nombre}
+                  {appointmentFor === "child" && schedule.length > 0 ? (
+                    // Filter vaccines based on official schedule
+                    schedule
+                      .filter(s => s.Estado === 'Vencida' || s.Estado === 'Proxima')
+                      .map((s) => (
+                        <SelectItem key={s.id_Vacuna} value={s.id_Vacuna.toString()}>
+                          {s.NombreVacuna} {s.Estado === 'Vencida' ? '(Atrasada ⚠️)' : '(Próxima)'}
+                        </SelectItem>
+                      ))
+                  ) : appointmentFor === "self" ? (
+                    vaccines?.map((vaccine) => (
+                      <SelectItem key={vaccine.id_Vacuna} value={vaccine.id_Vacuna.toString()}>
+                        {vaccine.Nombre}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-vaccines" disabled>
+                      {formData.id_Nino ? "No hay vacunas pendientes para agendar" : "Seleccione un niño"}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
+              {appointmentFor === "child" && formData.id_Nino && schedule.some(s => s.Estado === 'Pendiente') && (
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  * Las vacunas futuras no aparecen en esta lista hasta que corresponda por edad.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
