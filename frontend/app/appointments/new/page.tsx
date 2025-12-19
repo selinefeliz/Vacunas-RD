@@ -257,9 +257,23 @@ export default function NewAppointmentPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {appointmentFor === "child" && schedule.length > 0 ? (
-                    // Filter vaccines based on official schedule
                     schedule
                       .filter(s => s.Estado === 'Vencida' || s.Estado === 'Proxima')
+                      .reduce((acc: any[], current) => {
+                        // Deduplicate
+                        if (!acc.find(item => item.id_Vacuna === current.id_Vacuna)) {
+                          acc.push(current);
+                        }
+                        return acc;
+                      }, [])
+                      .filter((s, _, self) => {
+                        // Priority Logic: Get earliest date 
+                        const dates = self.map(i => new Date(i.FechaSugerida).getTime());
+                        const minDate = Math.min(...dates);
+                        const currentDate = new Date(s.FechaSugerida).getTime();
+                        // Allow if date matches minDate (within a small margin for same-day batch)
+                        return currentDate <= minDate;
+                      })
                       .map((s) => (
                         <SelectItem key={s.id_Vacuna} value={s.id_Vacuna.toString()}>
                           {s.NombreVacuna} {s.Estado === 'Vencida' ? '(Atrasada ⚠️)' : '(Próxima)'}

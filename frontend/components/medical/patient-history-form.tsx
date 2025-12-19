@@ -21,17 +21,21 @@ interface PatientHistoryFormProps {
   patientId: number
   childId?: number
   patientName: string
+  birthDate?: string // Added prop
   onSuccess: () => void
 }
 
-export function PatientHistoryForm({ patientId, childId, patientName, onSuccess }: PatientHistoryFormProps) {
+export function PatientHistoryForm({ patientId, childId, patientName, birthDate, onSuccess }: PatientHistoryFormProps) {
   const { toast } = useToast()
   const { request: createHistory, loading } = useApi()
+
+  // Format birthDate to YYYY-MM-DD if present
+  const formattedBirthDate = birthDate ? (birthDate.includes('T') ? birthDate.split('T')[0] : birthDate) : "";
 
   const form = useForm<z.infer<typeof historySchema>>({
     resolver: zodResolver(historySchema),
     defaultValues: {
-      fechaNacimiento: "",
+      fechaNacimiento: formattedBirthDate,
       alergias: "",
       notasAdicionales: "",
     },
@@ -93,12 +97,18 @@ export function PatientHistoryForm({ patientId, childId, patientName, onSuccess 
               name="fechaNacimiento"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
+                  <FormLabel className="flex items-center gap-2 text-gray-900">
                     <Calendar className="h-4 w-4" />
                     Fecha de Nacimiento *
                   </FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} max={getMaxBirthDate()} className="bg-white" />
+                    <Input
+                      type="date"
+                      {...field}
+                      max={getMaxBirthDate()}
+                      className={`bg-white text-black ${birthDate ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      readOnly={!!birthDate}
+                    />
                   </FormControl>
                   <p className="text-xs text-gray-600">
                     Esta información es obligatoria y será visible en todos los centros de vacunación

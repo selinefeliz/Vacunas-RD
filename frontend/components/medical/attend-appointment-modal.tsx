@@ -246,6 +246,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                 patientId={patientId}
                 childId={appointment.id_Nino}
                 patientName={appointment.NombrePaciente}
+                birthDate={appointment.FechaNacimiento}
                 onSuccess={handleHistoryCreated}
               />
             ) : (

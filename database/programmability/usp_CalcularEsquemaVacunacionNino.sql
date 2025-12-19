@@ -14,22 +14,26 @@ BEGIN
         RETURN;
     END
 
-    -- 2. Obtener vacunas ya aplicadas (Citas Asistidas)
+    -- 2. Obtener vacunas ya aplicadas (Citas Asistidas) O AGENDADAS
     -- Usamos PARTITION para asignar Numero de Dosis segun el orden de aplicacion
-    CREATE TABLE #DosisAplicadas (
+    CREATE TABLE #DosisOcupadas (
         id_Vacuna INT,
         DosisNumero INT
     );
 
-    INSERT INTO #DosisAplicadas (id_Vacuna, DosisNumero)
+    -- Insertar Asistidas
+    INSERT INTO #DosisOcupadas (id_Vacuna, DosisNumero)
     SELECT 
         id_Vacuna,
         ROW_NUMBER() OVER(PARTITION BY id_Vacuna ORDER BY Fecha ASC) as DosisNumero
     FROM dbo.CitaVacunacion
-    WHERE id_Nino = @id_Nino AND id_EstadoCita = (SELECT id_Estado FROM dbo.EstadoCita WHERE Estado = 'Asistida');
+    WHERE id_Nino = @id_Nino 
+      AND id_EstadoCita IN (
+          SELECT id_Estado FROM dbo.EstadoCita WHERE Estado IN ('Asistida', 'Agendada')
+      );
 
     -- 3. Calcular el esquema pendiente
-    -- Comparamos lo requerido vs lo aplicado
+    -- Comparamos lo requerido vs lo aplicado/agendado
     SELECT 
         ev.id_Vacuna,
         v.Nombre AS NombreVacuna,
@@ -43,10 +47,10 @@ BEGIN
         'Esquema Oficial' AS Criterio
     FROM dbo.EsquemaVacunacion ev
     INNER JOIN dbo.Vacuna v ON ev.id_Vacuna = v.id_Vacuna
-    LEFT JOIN #DosisAplicadas da ON ev.id_Vacuna = da.id_Vacuna AND ev.DosisNumero = da.DosisNumero
-    WHERE da.id_Vacuna IS NULL -- Solo mostrar las que NO están aplicadas
+    LEFT JOIN #DosisOcupadas da ON ev.id_Vacuna = da.id_Vacuna AND ev.DosisNumero = da.DosisNumero
+    WHERE da.id_Vacuna IS NULL -- Solo mostrar las que NO están aplicadas ni agendadas
     ORDER BY FechaSugerida ASC, ev.DosisNumero ASC;
 
-    DROP TABLE #DosisAplicadas;
+    DROP TABLE #DosisOcupadas;
 END;
 GO

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[usp_GetMedicalAppointments]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetMedicalAppointments]
     @id_PersonalSalud INT,
     @id_CentroVacunacion INT
 AS
@@ -22,6 +22,12 @@ BEGIN
         cv.id_Vacuna,
         v.Nombre AS NombreVacuna,
         v.DosisLimite,
+        CASE 
+            WHEN cv.id_Nino IS NOT NULL THEN n.FechaNacimiento
+            -- ELSE t.FechaNacimiento -- Tutor table might not have FechaNacimiento? Let's check or assume NULL for now if not needed, or check Tutor layout. 
+            -- Assuming Tutor has it or we only care about Nino for now as per user request.
+            ELSE NULL 
+        END AS FechaNacimiento,
         centro.NombreCentro,
         ec.Estado AS EstadoCita,
         cv.id_EstadoCita,
@@ -50,9 +56,14 @@ BEGIN
     INNER JOIN Vacuna v ON cv.id_Vacuna = v.id_Vacuna
     INNER JOIN CentroVacunacion centro ON cv.id_CentroVacunacion = centro.id_CentroVacunacion
     INNER JOIN EstadoCita ec ON cv.id_EstadoCita = ec.id_Estado
-    WHERE cv.id_PersonalSalud = @id_PersonalSalud
-      AND cv.id_CentroVacunacion = @id_CentroVacunacion
-      AND cv.id_EstadoCita = 2 -- Only confirmed appointments
+    WHERE cv.id_CentroVacunacion = @id_CentroVacunacion
+      -- Allow seeing appointments that are not yet assigned to a doctor (NULL) or assigned to this doctor
+      -- Actually, for a center view, usually all pending appointments are visible to all doctors.
+      -- Removing strict PersonalSalud filter to allow picking up pool appointments.
+      -- AND (cv.id_PersonalSalud IS NULL OR cv.id_PersonalSalud = @id_PersonalSalud) 
+      
+      -- Filter by Status: Show 'Agendada' (Scheduled) and 'Confirmada' (Confirmed)
+      AND ec.Estado IN ('Agendada', 'Confirmada')
     ORDER BY cv.Fecha ASC, cv.Hora ASC;
 END
 GO

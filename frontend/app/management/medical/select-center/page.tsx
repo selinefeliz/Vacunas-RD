@@ -10,8 +10,8 @@ import { Loader2, Building } from "lucide-react"
 
 interface MedicalCenter {
   id_CentroVacunacion: number
-  Nombre: string
-  EsPrincipal: boolean
+  NombreCentro: string
+  TipoAsignacion: string
 }
 
 export default function SelectCenterPage() {
@@ -54,7 +54,13 @@ export default function SelectCenterPage() {
   }, [user, authLoading, router, fetchCenters]);
 
   const handleCenterSelect = (center: MedicalCenter) => {
-    setSelectedCenter(center);
+    // Map backend structure to the structure expected by AuthContext
+    const centerForContext = {
+      id_CentroVacunacion: center.id_CentroVacunacion,
+      Nombre: center.NombreCentro,
+      EsPrincipal: center.TipoAsignacion === 'Principal'
+    };
+    setSelectedCenter(centerForContext);
     router.push("/management/medical/appointments");
   };
 
@@ -79,14 +85,14 @@ export default function SelectCenterPage() {
             {centers.map((center) => (
               <Button
                 key={center.id_CentroVacunacion}
-                variant={center.EsPrincipal ? "default" : "outline"}
+                variant={center.TipoAsignacion === 'Principal' ? "default" : "outline"}
                 className="w-full justify-start p-6 text-lg"
                 onClick={() => handleCenterSelect(center)}
               >
                 <Building className="mr-4 h-6 w-6" />
                 <div className="text-left">
-                  <div>{center.Nombre}</div>
-                  {center.EsPrincipal && <div className="text-xs font-light">(Principal)</div>}
+                  <div>{center.NombreCentro}</div>
+                  {center.TipoAsignacion === 'Principal' && <div className="text-xs font-light">(Principal)</div>}
                 </div>
               </Button>
             ))}

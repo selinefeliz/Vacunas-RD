@@ -66,15 +66,29 @@ router.post('/', verifyToken, async (req, res) => {
         const { id: id_Usuario } = req.user;
         const { id_Nino, id_CentroVacunacion, id_Vacuna, Fecha, Hora } = req.body;
 
+        console.log('[APPOINTMENTS] POST / - Body:', req.body);
+        console.log('[APPOINTMENTS] User:', id_Usuario);
+
         if (!id_CentroVacunacion || !id_Vacuna || !Fecha || !Hora) {
             return res.status(400).json({ message: 'Faltan campos requeridos para la cita.' });
         }
 
-        // Format Hora to HH:MM:SS for SQL Server Time type
-        let formattedHora = Hora;
-        if (Hora && typeof Hora === 'string' && Hora.match(/^\d{2}:\d{2}$/)) {
-            formattedHora = Hora + ':00';
+        // Validate time format HH:MM
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(Hora)) {
+            return res.status(400).json({ message: 'Formato de hora inválido. Use HH:MM' });
         }
+
+        // Format Hora for SQL Server (ensure HH:MM:SS)
+        let formattedHora = Hora;
+        if (Hora.indexOf(':') === 1) { // h:mm case
+            formattedHora = '0' + Hora;
+        }
+        if (formattedHora.length === 5) { // HH:MM case
+            formattedHora = formattedHora + ':00';
+        }
+
+        console.log('[APPOINTMENTS] Formatted Hora:', formattedHora);
 
         const pool = await poolPromise;
         const request = pool.request();
@@ -83,7 +97,7 @@ router.post('/', verifyToken, async (req, res) => {
         request.input('id_Vacuna', sql.Int, id_Vacuna);
         request.input('id_CentroVacunacion', sql.Int, id_CentroVacunacion);
         request.input('Fecha', sql.Date, Fecha);
-        request.input('Hora', sql.Time, formattedHora);
+        request.input('Hora', sql.VarChar(8), formattedHora);
         request.input('id_UsuarioRegistraCita', sql.Int, id_Usuario);
         request.input('RequiereTutor', sql.Bit, id_Nino ? 1 : 0);
         request.output('OutputMessage', sql.NVarChar(255));
@@ -99,9 +113,12 @@ router.post('/', verifyToken, async (req, res) => {
     } catch (err) {
         console.error('API Error on POST /api/appointments:', err);
         const errorMessage = err.originalError?.info?.message || err.message;
+
+        // Force sending the error message to the client for debugging
         res.status(500).json({
-            message: 'Error al agendar la cita.',
-            error: errorMessage
+            message: errorMessage, // Send actual error
+            details: 'Error interno al agendar la cita.',
+            debug: err.toString()
         });
     }
 });

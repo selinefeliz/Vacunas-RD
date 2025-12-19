@@ -18,4 +18,5 @@ export interface MedicalAppointment {
   id_UsuarioRegistraCita: number;
   id_Nino?: number;
   TieneHistorial?: number;
+  FechaNacimiento?: string;
 }
