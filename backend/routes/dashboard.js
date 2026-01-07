@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { poolConnect, sql } = require('../config/db');
+const { poolPromise, sql } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 
 // GET /stats - Get dashboard statistics

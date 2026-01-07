@@ -23,6 +23,7 @@ const availabilityRoutes = require('./routes/availability');
 const vaccinationRoutes = require('./routes/vaccinations');
 const otherRoutes = require('./routes/other');
 const vaccineCatalogRoutes = require('./routes/vaccineCatalogRoutes'); // Corrected import path
+const inventoryRoutes = require('./routes/inventory'); // Inventory routes
 const manufacturerRoutes = require('./routes/manufacturerRoutes'); // Added this line
 const medicalRoutes = require('./routes/medical'); // Medical routes for healthcare personnel
 const cedulaRoutes = require('./routes/cedula'); // Dominican ID validation Routes
@@ -72,6 +73,7 @@ app.use('/api/dashboard', verifyToken, dashboardRoutes);
 app.use('/api/vaccine-lots', verifyToken, vaccineLotRoutes);
 app.use('/api/availability', verifyToken, availabilityRoutes);
 app.use('/api/vaccinations', verifyToken, vaccinationRoutes);
+app.use('/api/inventory', verifyToken, inventoryRoutes); // Inventory routes
 app.use('/api/vaccine-catalog', verifyToken, vaccineCatalogRoutes); // Added this line
 app.use('/api/manufacturers', verifyToken, manufacturerRoutes); // Added this line
 app.use('/api/medical', verifyToken, medicalRoutes); // Medical appointments and patient history

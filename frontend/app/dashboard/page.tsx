@@ -92,6 +92,12 @@ export default function DashboardPage() {
       return // Stop further execution in this component
     }
 
+    // Redirect center staff to their dashboard
+    if (user && user.id_Rol === 6) {
+      router.push('/center-staff/dashboard');
+      return
+    }
+
     // Fetch appointments only if the user is a medical staff and a center is selected
     if ((user.role === "Medico" || user.role === "Enfermero") && selectedCenter) {
       fetchAppointments(selectedCenter.id_CentroVacunacion)

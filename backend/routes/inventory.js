@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const sql = require('mssql');
+const { sql, poolPromise } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 
 // POST /api/inventory/lots - Registrar un nuevo lote de vacunas
@@ -10,23 +10,21 @@ router.post('/lots', [verifyToken, checkRole([1, 6])], async (req, res) => {
         id_CentroVacunacion,
         NumeroLote,
         FechaCaducidad,
-        FechaRecepcion,
         CantidadInicial
     } = req.body;
 
     // Simple validation
-    if (!id_VacunaCatalogo || !id_CentroVacunacion || !NumeroLote || !FechaCaducidad || !FechaRecepcion || !CantidadInicial) {
+    if (!id_VacunaCatalogo || !id_CentroVacunacion || !NumeroLote || !FechaCaducidad || !CantidadInicial) {
         return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
     }
 
     try {
-        const pool = await sql.connect();
+        const pool = await poolPromise;
         const result = await pool.request()
             .input('id_VacunaCatalogo', sql.Int, id_VacunaCatalogo)
             .input('id_CentroVacunacion', sql.Int, id_CentroVacunacion)
             .input('NumeroLote', sql.NVarChar(100), NumeroLote)
             .input('FechaCaducidad', sql.Date, FechaCaducidad)
-            .input('FechaRecepcion', sql.Date, FechaRecepcion)
             .input('CantidadInicial', sql.Int, CantidadInicial)
             .execute('usp_AddLote');
 
@@ -42,7 +40,7 @@ router.get('/lots/center/:centerId', [verifyToken, checkRole([1, 6])], async (re
     const { centerId } = req.params;
 
     try {
-        const pool = await sql.connect();
+        const pool = await poolPromise;
         const result = await pool.request()
             .input('id_CentroVacunacion', sql.Int, centerId)
             .execute('usp_GetLotesPorCentro');

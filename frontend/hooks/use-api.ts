@@ -32,14 +32,14 @@ const useApi = <T = any>() => {
       if (token) {
         finalHeaders['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
-          const errorMessage = "API URL is not configured. Please set NEXT_PUBLIC_API_URL in your environment variables.";
-          console.error(errorMessage);
-          setError(errorMessage);
-          setLoading(false);
-          return;
+        const errorMessage = "API URL is not configured. Please set NEXT_PUBLIC_API_URL in your environment variables.";
+        console.error(errorMessage);
+        setError(errorMessage);
+        setLoading(false);
+        return;
       }
 
       try {
@@ -54,6 +54,7 @@ const useApi = <T = any>() => {
             logout();
           }
           const errorData = await response.json().catch(() => ({ message: response.statusText }));
+          console.error(`API Error ${response.status} on ${endpoint}:`, errorData);
           throw new Error(errorData.message || 'An error occurred');
         }
 

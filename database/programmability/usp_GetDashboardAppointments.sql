@@ -23,7 +23,7 @@ BEGIN
     WHERE 
         c.Fecha = CAST(GETDATE() AS DATE)
     AND 
-        c.id_EstadoCita = (SELECT id_Estado FROM EstadoCita WHERE Estado = 'Programada')
+        c.id_EstadoCita = (SELECT id_Estado FROM EstadoCita WHERE Estado = 'Agendada')
     ORDER BY 
         c.Hora ASC;
 END

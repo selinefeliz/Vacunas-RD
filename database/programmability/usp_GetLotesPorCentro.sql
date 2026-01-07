@@ -3,7 +3,7 @@
 -- Create date: 2025-06-14
 -- Description: Obtiene la lista de lotes de vacunas para un centro de vacunación específico.
 -- =============================================
-CREATE PROCEDURE usp_GetLotesPorCentro
+CREATE OR ALTER PROCEDURE usp_GetLotesPorCentro
     @id_CentroVacunacion INT
 AS
 BEGIN
@@ -23,10 +23,8 @@ BEGIN
         V.Nombre AS NombreVacuna,
         F.Fabricante AS NombreFabricante,
         L.FechaCaducidad,
-        L.FechaRecepcion,
         L.CantidadInicial,
-        L.CantidadDisponible,
-        L.Activo
+        L.CantidadDisponible
     FROM
         dbo.Lote AS L
     INNER JOIN

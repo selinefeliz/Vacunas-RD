@@ -48,9 +48,7 @@ export default function AppointmentDetailPage() {
     <div className="space-y-6 max-w-3xl mx-auto py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Detalles de la Cita</h1>
-        <Button asChild>
-          <Link href="/dashboard/appointments">Volver</Link>
-        </Button>
+        <Button onClick={() => router.back()}>Volver</Button>
       </div>
       <AppointmentCard appointment={appointment} />
     </div>

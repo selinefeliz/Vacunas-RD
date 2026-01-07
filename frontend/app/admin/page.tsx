@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/auth-context"
+import Link from "next/link"
 import { Users, Calendar, AlertTriangle, TrendingUp, Syringe, Clock, CheckCircle } from "lucide-react"
 
 import useApi from "@/hooks/use-api"
@@ -163,22 +164,30 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Button className="h-20 flex-col gap-2">
-                <Users className="h-6 w-6" />
-                Registrar Paciente
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2">
-                <Syringe className="h-6 w-6" />
-                Nueva Vacunación
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2">
-                <Calendar className="h-6 w-6" />
-                Agendar Cita
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2">
-                <TrendingUp className="h-6 w-6" />
-                Ver Reportes
-              </Button>
+              <Link href="/admin/users" passHref>
+                <Button className="h-20 w-full flex-col gap-2">
+                  <Users className="h-6 w-6" />
+                  Registrar Paciente
+                </Button>
+              </Link>
+              <Link href="/management/medical/select-center" passHref>
+                <Button variant="outline" className="h-20 w-full flex-col gap-2">
+                  <Syringe className="h-6 w-6" />
+                  Nueva Vacunación
+                </Button>
+              </Link>
+              <Link href="/agendar" passHref>
+                <Button variant="outline" className="h-20 w-full flex-col gap-2">
+                  <Calendar className="h-6 w-6" />
+                  Agendar Cita
+                </Button>
+              </Link>
+              <Link href="/reports" passHref>
+                <Button variant="outline" className="h-20 w-full flex-col gap-2">
+                  <TrendingUp className="h-6 w-6" />
+                  Ver Reportes
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
