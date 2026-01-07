@@ -83,25 +83,18 @@ Sigue estos pasos para configurar y ejecutar el proyecto en un entorno de desarr
 *   **Microsoft SQL Server** (una instancia local o en la nube).
 
 ### 1. Configuración de la Base de Datos
-1.  Abre tu cliente de SQL Server (como SSMS o Azure Data Studio).
-2.  Crea una nueva base de datos para el proyecto.
-3.  Ejecuta el script `database/schema.sql` para crear todas las tablas.
-4.  Ejecuta todos los scripts de la carpeta `database/programmability/` para crear los procedimientos almacenados.
-
+1.  Se configura sola al ejecutar en backend ya que esta en azure. PARA LOS CAMBIOS EN LA BD VE A AZURE O CONECTATE A LA CONEXION EN SQL SERVER CON LA BD Y EJECUTA LOS NUEEVOS SCRIPT
 ### 2. Configuración del Backend (API)
-1.  Navega al directorio `api/`: `cd api`
-2.  Crea un archivo `.env` a partir del ejemplo `.env.example`.
-3.  Configura la variable de conexión a la base de datos (`DB_CONNECTION_STRING`) y otras variables de entorno en el archivo `.env`.
-4.  Instala las dependencias: `npm install`
+1.  Navega al directorio `backend/`: `cd backend`
+2.  Instala las dependencias: `npm install`
 5.  Inicia el servidor: `npm start`
     *   Por defecto, la API se ejecutará en `http://localhost:3000`.
 
 ### 3. Configuración del Frontend
 1.  En otra terminal, navega al directorio `frontend/`: `cd frontend`
-2.  Crea un archivo `.env.local` a partir del ejemplo `.env.local.example`.
-3.  Asegúrate de que la variable `NEXT_PUBLIC_API_URL` apunte a la URL de tu backend (ej. `http://localhost:3000/api`).
-4.  Instala las dependencias: `npm install`
-5.  Inicia la aplicación de desarrollo: `npm run dev`
+2. En la carpeta hay un archivo .bat llamado `instalar`, ejecutalo para que descarge las dependencias
+4.  Instala las dependencias: `npm install` 
+5.  Inicia la aplicación de desarrollo: `npm run dev` o selecciona el documenrto llamado Iniciar
     *   La aplicación web estará disponible en `http://localhost:3003`.
 
 ---
