@@ -14,20 +14,6 @@ BEGIN
     FROM dbo.Usuario u
     WHERE u.id_Rol = 2 -- Médico
         AND u.id_Estado = 1 -- Activo
-        AND u.id_CentroVacunacion = @id_CentroVacunacion
-
-    UNION
-
-    SELECT 
-        u.id_Usuario,
-        COALESCE(u.Nombre + ' ' + u.Apellido, u.Email) AS NombreCompleto,
-        u.Nombre,
-        u.Apellido,
-        u.Email
-    FROM dbo.Usuario u
-    JOIN dbo.MedicoCentro mc ON u.id_Usuario = mc.id_Usuario
-    WHERE u.id_Rol = 2 -- Médico
-        AND u.id_Estado = 1 -- Activo
-        AND mc.id_CentroVacunacion = @id_CentroVacunacion;
+        AND u.id_CentroVacunacion = @id_CentroVacunacion;
 END
 GO

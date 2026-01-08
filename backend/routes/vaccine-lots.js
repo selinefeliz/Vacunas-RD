@@ -35,7 +35,7 @@ router.get('/center/:centerId', [verifyToken, checkRole([1, 2, 3, 6])], async (r
         console.log('------------------------------------------------------------');
         console.log('GET /api/vaccine-lots/center endpoint called');
         console.log('Full user object from token:', JSON.stringify(req.user));
-        
+
         // Security: Always use the center ID from the user's token, not from the URL parameter.
         const centerId = req.user.id_CentroVacunacion;
         console.log('Center ID from token:', centerId, typeof centerId);
@@ -47,24 +47,24 @@ router.get('/center/:centerId', [verifyToken, checkRole([1, 2, 3, 6])], async (r
 
         console.log('Connecting to database...');
         const pool = await poolPromise;
-        
+
         // First check if the center even exists
         const centerCheck = await pool.request()
             .input('id', sql.Int, centerId)
             .query('SELECT id_CentroVacunacion, NombreCentro FROM CentroVacunacion WHERE id_CentroVacunacion = @id');
-        
+
         if (centerCheck.recordset.length === 0) {
             console.log(`CRITICAL ERROR: Center ID ${centerId} does not exist in database!`);
             return res.status(404).send({ message: 'The vaccination center associated with your account does not exist in the database.' });
         }
-        
+
         console.log(`Center validated: ${centerCheck.recordset[0].id_CentroVacunacion} - ${centerCheck.recordset[0].NombreCentro}`);
-        
+
         // Now check if we have any lots for this center directly
         const directCheck = await pool.request()
             .input('centerId', sql.Int, centerId)
             .query('SELECT COUNT(*) AS LotCount FROM Lote WHERE id_CentroVacunacion = @centerId');
-            
+
         console.log(`Direct DB check: Center ${centerId} has ${directCheck.recordset[0].LotCount} lots`);
 
         // Now execute the stored procedure
@@ -72,14 +72,14 @@ router.get('/center/:centerId', [verifyToken, checkRole([1, 2, 3, 6])], async (r
         const result = await pool.request()
             .input('id_CentroVacunacion', sql.Int, centerId)
             .execute('usp_GetVaccineLotsByCenter');
-        
+
         console.log('Stored procedure executed. Record count:', result.recordset.length);
         if (result.recordset.length > 0) {
             console.log('First record:', JSON.stringify(result.recordset[0]));
         } else {
             console.log('No records returned from stored procedure.');
         }
-        
+
         // Send the response
         res.json(result.recordset);
         console.log('Response sent to client');
@@ -108,6 +108,19 @@ router.post('/', [verifyToken, checkRole([1, 2, 6])], async (req, res) => {
         }
 
         const pool = await poolPromise;
+        // Validation: Expiration date must be in the future
+        const today = new Date();
+        const expirationDate = new Date(FechaCaducidad);
+        // Reset time part for comparison to avoid "same day" issues if needed, 
+        // but typically expiration should be > today. 
+        // Let's strictly block past dates.
+        today.setHours(0, 0, 0, 0);
+        expirationDate.setHours(0, 0, 0, 0);
+
+        if (expirationDate < today) {
+            return res.status(400).send({ message: 'Error: No se puede guardar el lote porque la fecha de caducidad ya ha pasado.' });
+        }
+
         const request = pool.request()
             // Map to the correct stored procedure parameter names
             .input('id_VacunaCatalogo', sql.Int, id_VacunaCatalogo)
@@ -118,15 +131,15 @@ router.post('/', [verifyToken, checkRole([1, 2, 6])], async (req, res) => {
             // Declare output parameters
             .output('OutputMessage', sql.NVarChar(255))
             .output('New_id_LoteVacuna', sql.Int);
-        
+
         const result = await request.execute('usp_AddVaccineLot');
 
         const outputMessage = result.output.OutputMessage;
         const newLoteId = result.output.New_id_LoteVacuna;
 
         if (newLoteId) {
-            res.status(201).json({ 
-                message: outputMessage, 
+            res.status(201).json({
+                message: outputMessage,
                 lote: {
                     id_Lote: newLoteId,
                     id_VacunaCatalogo,
@@ -134,7 +147,7 @@ router.post('/', [verifyToken, checkRole([1, 2, 6])], async (req, res) => {
                     NumeroLote,
                     FechaCaducidad,
                     CantidadInicial
-                } 
+                }
             });
         } else {
             // The USP handles errors with RAISERROR, which will be caught by the catch block.

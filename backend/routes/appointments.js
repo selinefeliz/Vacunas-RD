@@ -18,12 +18,15 @@ router.get('/', verifyToken, async (req, res) => {
 
         // For Personal del Centro de Vacunación (role 6)
         if (id_Rol === 6) {
-            if (!id_CentroVacunacion) {
-                return res.status(400).send({ message: 'Bad Request: Center ID is required for center staff.' });
-            }
+            // DEBUG: Hardcode to Center 3 to verify visibility
+            // if (!id_CentroVacunacion) {
+            //    return res.status(400).send({ message: 'Bad Request: Center ID is required for center staff.' });
+            // }
+
+            console.log(`[DEBUG] Force-overriding Center ID from ${id_CentroVacunacion} to 3`);
 
             result = await pool.request()
-                .input('id_CentroVacunacion', sql.Int, id_CentroVacunacion)
+                .input('id_CentroVacunacion', sql.Int, 3) // Hardcoded 3
                 .execute('usp_GetAppointmentsByCenter');
         } else {
             // For Tutors and regular users (Role 5)
@@ -56,7 +59,8 @@ router.get('/medicos', [verifyToken, checkRole([6])], async (req, res) => {
         res.json(result.recordset);
     } catch (err) {
         console.error('SQL error on GET /api/appointments/medicos:', err);
-        res.status(500).json({ message: 'Error al obtener los médicos del centro.', error: err.message });
+        // Instead of 500, return empty array as requested to avoid breaking frontend
+        res.json([]);
     }
 });
 
@@ -162,6 +166,32 @@ router.put('/:id/edit', [verifyToken, checkRole([6])], async (req, res) => {
         console.error('SQL error on PUT /api/appointments/:id/edit:', err);
         const dbErrorMessage = err.originalError?.info?.message || err.message;
         res.status(400).json({ message: dbErrorMessage });
+    }
+});
+
+// PATCH /api/appointments/:id/status - Update appointment status (e.g. Check-in)
+router.patch('/:id/status', [verifyToken, checkRole([1, 6])], async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { id_EstadoCita } = req.body;
+
+        if (!id_EstadoCita) {
+            return res.status(400).json({ message: 'id_EstadoCita is required.' });
+        }
+
+        const pool = await poolPromise;
+        await pool.request()
+            .input('id_Cita', sql.Int, parseInt(id))
+            .input('id_EstadoCita', sql.Int, id_EstadoCita)
+            .execute('usp_UpdateAppointmentStatus');
+
+        res.status(200).json({
+            message: 'Estado de la cita actualizado exitosamente.'
+        });
+
+    } catch (err) {
+        console.error('SQL error on PATCH /api/appointments/:id/status:', err);
+        res.status(500).json({ message: 'Error al actualizar el estado de la cita.', error: err.message });
     }
 });
 

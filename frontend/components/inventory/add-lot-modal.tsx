@@ -77,24 +77,34 @@ export function AddLotModal({ isOpen, onClose, onSuccess, centerId }: AddLotModa
         }
     }, [isOpen, fetchVaccineTypes]);
 
+    const [localError, setLocalError] = useState<string | null>(null);
+
     const onSubmit = async (values: z.infer<typeof lotSchema>) => {
-        const payload = {
-            ...values,
-            id_VacunaCatalogo: Number(values.id_VacunaCatalogo),
-            id_CentroVacunacion: centerId,
-        };
+        setLocalError(null);
+        try {
+            const payload = {
+                ...values,
+                id_VacunaCatalogo: Number(values.id_VacunaCatalogo),
+                id_CentroVacunacion: centerId,
+            };
 
-        const { error } = await submitLot('/api/vaccine-lots', {
-            method: 'POST',
-            body: payload,
-        });
+            await submitLot('/api/vaccine-lots', {
+                method: 'POST',
+                body: payload,
+            });
 
-        if (error) {
-            toast({ title: 'Error', description: 'No se pudo registrar el lote.', variant: 'destructive' });
-        } else {
             toast({ title: 'Éxito', description: 'Lote registrado correctamente.' });
             onSuccess();
             onClose();
+        } catch (error: any) {
+            console.error(error)
+            // Use the message from the backend if available
+            const msg = error.message || error.toString()
+            if (msg.includes("fecha de caducidad")) {
+                setLocalError("Error: No se puede guardar el lote porque la fecha de caducidad ya ha pasado")
+            } else {
+                setLocalError("Error al registrar el lote. Verifique los datos.")
+            }
         }
     };
 
@@ -181,9 +191,52 @@ export function AddLotModal({ isOpen, onClose, onSuccess, centerId }: AddLotModa
                                 </FormItem>
                             )}
                         />
+
+                        {/* Real-time validation error */}
+                        {(() => {
+                            const fechaCaducidad = form.watch("FechaCaducidad");
+                            if (fechaCaducidad) {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const exp = new Date(fechaCaducidad);
+                                // The input date might be parsed in UTC or local. 
+                                // Simple string comparison or Date parsing is usually sufficient for YYYY-MM-DD
+                                const expDate = new Date(fechaCaducidad + 'T00:00:00');
+
+                                if (expDate < today) {
+                                    return (
+                                        <div className="text-red-500 text-sm font-medium p-2 bg-red-50 rounded border border-red-200">
+                                            Error: No se puede guardar el lote porque la fecha de caducidad ya ha pasado
+                                        </div>
+                                    );
+                                }
+                            }
+                            // Also show API errors if any
+                            if (localError) {
+                                return (
+                                    <div className="text-red-500 text-sm font-medium p-2 bg-red-50 rounded border border-red-200">
+                                        {localError}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
+
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                            <Button type="submit" disabled={submitting}>{submitting ? 'Guardando...' : 'Guardar Lote'}</Button>
+                            <Button
+                                type="submit"
+                                disabled={submitting || (() => {
+                                    const fechaCaducidad = form.watch("FechaCaducidad");
+                                    if (!fechaCaducidad) return false;
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const expDate = new Date(fechaCaducidad + 'T00:00:00');
+                                    return expDate < today;
+                                })()}
+                            >
+                                {submitting ? 'Guardando...' : 'Guardar Lote'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>

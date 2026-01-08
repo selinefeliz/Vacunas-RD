@@ -49,86 +49,85 @@ BEGIN
         RETURN;
     END
 
-    -- The UNIQUE constraint UQ_Lote_Centro_Vacuna_NumeroLote will handle duplicate check.
-    -- However, we can provide a more user-friendly message if we check it here.
-    IF EXISTS (SELECT 1 FROM dbo.Lote WHERE id_CentroVacunacion = @id_CentroVacunacion AND id_VacunaCatalogo = @id_VacunaCatalogo AND NumeroLote = @NumeroLote) -- Updated duplicate check
+    -- Check if Lot already exists for this Center, Vaccine, Batch Number AND Expiration Date
+    -- If it exists, we ADD to the existing stock instead of erroring.
+    IF EXISTS (SELECT 1 FROM dbo.Lote WHERE id_CentroVacunacion = @id_CentroVacunacion AND id_VacunaCatalogo = @id_VacunaCatalogo AND NumeroLote = @NumeroLote AND FechaCaducidad = @FechaCaducidad)
     BEGIN
-        SET @OutputMessage = 'Error: A lot with this NumeroLote for the specified vaccine and vaccination center already exists.';
-        RAISERROR(@OutputMessage, 16, 1);
-        RETURN;
+        BEGIN TRANSACTION;
+        BEGIN TRY
+            UPDATE dbo.Lote
+            SET CantidadInicial = CantidadInicial + @CantidadInicial,
+                CantidadDisponible = CantidadDisponible + @CantidadInicial
+            WHERE id_CentroVacunacion = @id_CentroVacunacion 
+              AND id_VacunaCatalogo = @id_VacunaCatalogo 
+              AND NumeroLote = @NumeroLote
+              AND FechaCaducidad = @FechaCaducidad;
+
+            -- Get the ID of the updated lot
+            SELECT @New_id_LoteVacuna = id_LoteVacuna
+            FROM dbo.Lote 
+            WHERE id_CentroVacunacion = @id_CentroVacunacion 
+              AND id_VacunaCatalogo = @id_VacunaCatalogo 
+              AND NumeroLote = @NumeroLote
+              AND FechaCaducidad = @FechaCaducidad;
+
+            COMMIT TRANSACTION;
+            SET @OutputMessage = 'Vaccine lot stock updated successfully (Merged with existing lot). Lot ID: ' + CAST(@New_id_LoteVacuna AS NVARCHAR(10)) + '.';
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+            
+            DECLARE @UpdateErrorMsg NVARCHAR(4000) = ERROR_MESSAGE();
+            SET @OutputMessage = 'Error updating existing vaccine lot: ' + @UpdateErrorMsg;
+            RAISERROR(@OutputMessage, 16, 1);
+            RETURN;
+        END CATCH
     END
+    ELSE
+    BEGIN
+        -- New Lot - Insert
+        BEGIN TRANSACTION;
+        BEGIN TRY
+            INSERT INTO dbo.Lote (
+                id_VacunaCatalogo, 
+                id_CentroVacunacion, 
+                NumeroLote, 
+                FechaCaducidad, 
+                CantidadInicial, 
+                CantidadDisponible
+            )
+            VALUES (
+                @id_VacunaCatalogo, 
+                @id_CentroVacunacion, 
+                @NumeroLote, 
+                @FechaCaducidad, 
+                @CantidadInicial, 
+                @CantidadInicial 
+            );
 
-    BEGIN TRANSACTION;
+            SET @New_id_LoteVacuna = SCOPE_IDENTITY();
 
-    BEGIN TRY
-        INSERT INTO dbo.Lote (
-            id_VacunaCatalogo, 
-            id_CentroVacunacion, -- Added column
-            NumeroLote, 
-            FechaCaducidad, 
-            CantidadInicial, 
-            CantidadDisponible
-        )
-        VALUES (
-            @id_VacunaCatalogo, 
-            @id_CentroVacunacion, -- Added value
-            @NumeroLote, 
-            @FechaCaducidad, 
-            @CantidadInicial, 
-            @CantidadInicial -- CantidadDisponible is same as CantidadInicial on creation
-        );
+            COMMIT TRANSACTION;
+            SET @OutputMessage = 'Vaccine lot added successfully. Lot ID: ' + CAST(@New_id_LoteVacuna AS NVARCHAR(10)) + '.';
 
-        SET @New_id_LoteVacuna = SCOPE_IDENTITY();
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 
-        COMMIT TRANSACTION;
-        SET @OutputMessage = 'Vaccine lot added successfully. Lot ID: ' + CAST(@New_id_LoteVacuna AS NVARCHAR(10)) + '.';
+            DECLARE @CaughtErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+            SET @OutputMessage = 'Error adding vaccine lot: ' + @CaughtErrorMessage;
+            
+            -- Handle potential unique constraint violations not covered by our specific check (e.g. if we missed a column in the check but the constraint considers it)
+            -- However, with the new logic, the most common duplication is handled. 
+            IF ERROR_NUMBER() = 2627 
+            BEGIN
+                 SET @OutputMessage = 'Error: A lot with similar details exists but could not be merged. ' + @CaughtErrorMessage;
+            END
 
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-
-        DECLARE @CaughtErrorMessage NVARCHAR(4000);
-        DECLARE @CaughtErrorSeverity INT;
-        DECLARE @CaughtErrorState INT;
-        DECLARE @CaughtErrorNumber INT;
-        DECLARE @CaughtErrorProcedure NVARCHAR(128);
-        DECLARE @CaughtErrorLine INT;
-
-        SELECT 
-            @CaughtErrorMessage = ERROR_MESSAGE(),
-            @CaughtErrorSeverity = ERROR_SEVERITY(),
-            @CaughtErrorState = ERROR_STATE(),
-            @CaughtErrorNumber = ERROR_NUMBER(),
-            @CaughtErrorProcedure = ERROR_PROCEDURE(),
-            @CaughtErrorLine = ERROR_LINE();
-
-        -- Set the output message with detailed error info
-        SET @OutputMessage = 'Error adding vaccine lot: ' + ISNULL(@CaughtErrorMessage, 'Unknown error') + 
-                             ' (Procedure: ' + ISNULL(@CaughtErrorProcedure, 'usp_AddVaccineLot') + 
-                             ', Line: ' + ISNULL(CAST(@CaughtErrorLine AS NVARCHAR(10)), 'N/A') + ')';
-
-        -- Customize message for known errors like unique constraint violation
-        IF @CaughtErrorNumber = 2627 -- Unique constraint violation for UQ_Lote_Centro_Vacuna_NumeroLote
-        BEGIN
-            SET @OutputMessage = 'Error: A lot with NumeroLote ''' + @NumeroLote + ''' for Vacuna ID ' + CAST(@id_VacunaCatalogo AS NVARCHAR(10)) + ' and CentroVacunacion ID ' + CAST(@id_CentroVacunacion AS NVARCHAR(10)) + ' already exists. ' + ISNULL(@CaughtErrorMessage, '');
-        END
-        
-        -- Re-raise the error using RAISERROR to ensure the client is notified
-        -- Use the caught values to preserve the original error context as much as possible
-        IF @CaughtErrorMessage IS NOT NULL AND @CaughtErrorSeverity IS NOT NULL AND @CaughtErrorState IS NOT NULL
-        BEGIN
-            RAISERROR (@CaughtErrorMessage, @CaughtErrorSeverity, @CaughtErrorState);
-        END
-        ELSE
-        BEGIN
-            -- Fallback if error functions somehow didn't return expected values (should not happen in a CATCH block)
-            RAISERROR ('An unspecified error occurred in usp_AddVaccineLot CATCH block. Check @OutputMessage for details.', 16, 1);
-        END
-        
-        -- Ensure the stored procedure exits after handling the error.
-        RETURN;
-    END CATCH
+            RAISERROR (@OutputMessage, 16, 1);
+            RETURN;
+        END CATCH
+    END
 END;
 GO
 

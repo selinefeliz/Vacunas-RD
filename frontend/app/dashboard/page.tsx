@@ -99,7 +99,7 @@ export default function DashboardPage() {
 
     // Redirect center staff to their dashboard
     if (user && user.id_Rol === 6) {
-      router.push('/management/availability'); // Correct path for center staff availability
+      router.push('/center-staff/dashboard'); // Correct path for center staff dashboard
       return
     }
 

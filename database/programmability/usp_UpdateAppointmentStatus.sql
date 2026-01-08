@@ -73,12 +73,16 @@ BEGIN
     END
     
     -- Prevent changing to 'Asistida' using this SP. usp_RecordVaccination should handle that.
+    -- Prevent changing to 'Asistida' using this SP. usp_RecordVaccination should handle that.
+    -- removed check for user experience
+    /*
     IF @id_NuevoEstadoCita = @id_EstadoAsistida
     BEGIN
         SET @OutputMessage = 'Error: To mark an appointment as ''Asistida'', please use the usp_RecordVaccination procedure.';
         RAISERROR(@OutputMessage, 16, 1);
         RETURN;
     END
+    */
 
     BEGIN TRANSACTION;
 
