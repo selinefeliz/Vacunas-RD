@@ -118,24 +118,53 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
                   <span className="font-medium text-gray-700">Fecha de Nacimiento:</span>
                   <p className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    {new Date(patientHistory.FechaNacimiento).toLocaleDateString()}
+                    {new Date(patientHistory.FechaNacimiento).getUTCFullYear()}-
+                    {(new Date(patientHistory.FechaNacimiento).getUTCMonth() + 1).toString().padStart(2, '0')}-
+                    {new Date(patientHistory.FechaNacimiento).getUTCDate().toString().padStart(2, '0')}
                   </p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Edad Actual:</span>
-                  <p className="text-lg font-semibold text-blue-600">{patientHistory.EdadActual} años</p>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {patientHistory.EdadActual > 0
+                      ? `${patientHistory.EdadActual} ${patientHistory.EdadActual === 1 ? 'año' : 'años'}`
+                      : (
+                        (() => {
+                          const birth = new Date(patientHistory.FechaNacimiento);
+                          const today = new Date();
+
+                          // Rough month diff
+                          let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
+
+                          // Adjust if day of month hasn't passed yet
+                          if (today.getUTCDate() < birth.getUTCDate()) {
+                            months--;
+                          }
+
+                          if (months <= 0) {
+                            // Calculate days
+                            const diffTime = Math.abs(today.getTime() - birth.getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            return `${diffDays} ${diffDays === 1 ? 'día' : 'días'}`;
+                          }
+
+                          return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+                        })()
+                      )
+                    }
+                  </p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div>
                   <span className="font-medium text-gray-700">Alergias:</span>
-                  <p className="text-sm bg-red-50 p-2 rounded border">
+                  <p className="text-sm bg-red-50 p-2 rounded border text-black font-medium">
                     {patientHistory.Alergias || "No se han registrado alergias"}
                   </p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Notas Médicas:</span>
-                  <p className="text-sm bg-blue-50 p-2 rounded border">
+                  <p className="text-sm bg-blue-50 p-2 rounded border text-black font-medium">
                     {patientHistory.NotasAdicionales || "No hay notas adicionales"}
                   </p>
                 </div>
@@ -145,87 +174,90 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
         </Card>
       )}
 
-      {/* Vaccination History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Syringe className="h-5 w-5" />
-            Historial de Vacunación
-          </CardTitle>
-          <CardDescription>
-            Registro completo de vacunas aplicadas ({vaccinationRecords.length} registros)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {vaccinationRecords.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vacuna</TableHead>
-                    <TableHead>Dosis</TableHead>
-                    <TableHead>Fecha Aplicación</TableHead>
-                    <TableHead>Centro Médico</TableHead>
-                    <TableHead>Personal</TableHead>
-                    <TableHead>Lote</TableHead>
-                    <TableHead>Notas</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vaccinationRecords.map((record, index) => (
-                    <TableRow key={`${record.id_HistoricoCita}-${index}`}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{record.Vacuna}</span>
-                          <span className="text-xs text-gray-500">Esquema: {record.DosisLimite} dosis</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {record.NumeroDosis} de {record.DosisLimite}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDateString(record.FechaAplicacion)}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock className="h-3 w-3" />
-                            {formatTimeString(record.HoraAplicacion)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {record.CentroMedico}
-                        </div>
-                      </TableCell>
-                      <TableCell>{record.NombreCompletoPersonal || "N/A"}</TableCell>
-                      <TableCell>{record.NumeroLote || "N/A"}</TableCell>
-                      <TableCell>{record.Notas || "-"}</TableCell>
-                      <TableCell>
-                        <div className="max-w-xs">
-                          <p className="text-xs text-gray-600 truncate" title={record.Notas}>
-                            {record.Notas || "Sin notas"}
-                          </p>
-                        </div>
-                      </TableCell>
+
+      {/* Vaccination History (Only shown when requested) */}
+      {showVaccinesOnly && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Syringe className="h-5 w-5" />
+              Historial de Vacunación
+            </CardTitle>
+            <CardDescription>
+              Registro completo de vacunas aplicadas ({vaccinationRecords.length} registros)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {vaccinationRecords.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vacuna</TableHead>
+                      <TableHead>Dosis</TableHead>
+                      <TableHead>Fecha Aplicación</TableHead>
+                      <TableHead>Centro Médico</TableHead>
+                      <TableHead>Personal</TableHead>
+                      <TableHead>Lote</TableHead>
+                      <TableHead>Notas</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Syringe className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No se han registrado vacunas para este paciente</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {vaccinationRecords.map((record, index) => (
+                      <TableRow key={`${record.id_HistoricoCita}-${index}`}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{record.Vacuna}</span>
+                            <span className="text-xs text-gray-500">Esquema: {record.DosisLimite} dosis</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {record.NumeroDosis} de {record.DosisLimite}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDateString(record.FechaAplicacion)}
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              {formatTimeString(record.HoraAplicacion)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {record.CentroMedico}
+                          </div>
+                        </TableCell>
+                        <TableCell>{record.NombreCompletoPersonal || "N/A"}</TableCell>
+                        <TableCell>{record.NumeroLote || "N/A"}</TableCell>
+                        <TableCell>
+                          <div className="max-w-xs">
+                            <p className="text-xs text-gray-600 truncate" title={record.Notas}>
+                              {record.Notas || "Sin notas"}
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Syringe className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No se han registrado vacunas para este paciente</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   )
 }

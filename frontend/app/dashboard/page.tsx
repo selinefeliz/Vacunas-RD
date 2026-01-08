@@ -88,13 +88,18 @@ export default function DashboardPage() {
 
     // Redirect medical users to the correct page
     if (user && user.id_Rol === 2) {
-      router.push('/medical/select-center');
+      router.push('/admin/inventory');
+      return // Stop further execution in this component
+    }
+
+    if (user && user.id_Rol === 3) {
+      router.push('/management/medical/select-center');
       return // Stop further execution in this component
     }
 
     // Redirect center staff to their dashboard
     if (user && user.id_Rol === 6) {
-      router.push('/center-staff/dashboard');
+      router.push('/management/availability'); // Correct path for center staff availability
       return
     }
 

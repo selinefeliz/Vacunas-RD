@@ -37,8 +37,8 @@ BEGIN
         RETURN;
     END
 
-    -- 4. Business Rule: if role is 'Personal' (ID 6), center must be provided.
-    IF @id_Rol = 6 AND @id_CentroVacunacion IS NULL
+    -- 4. Business Rule: if role is 'Personal' (ID 6) or 'Enfermera' (ID 3), center must be provided.
+    IF (@id_Rol = 6 OR @id_Rol = 3) AND @id_CentroVacunacion IS NULL
     BEGIN
         RAISERROR('A Vaccination Center must be assigned for this user role.', 16, 1);
         RETURN;

@@ -32,7 +32,9 @@ export default function LoginPage() {
       if (user.role === "Administrador") {
         setIsAdmin(true); // This will show the admin-specific UI on the login page
       } else if (user.id_Rol === 2) { // 'Médico'
-         router.push('/management/medical/select-center');
+        router.push('/admin/inventory');
+      } else if (user.id_Rol === 3) { // 'Enfermera'
+        router.push('/management/medical/select-center');
       } else if (user.id_Rol === 6) {
         router.push('/management/availability');
       } else {
@@ -41,7 +43,7 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-    const [error, setError] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +51,7 @@ export default function LoginPage() {
 
     try {
       console.log(`[LoginPage] Attempting login with Email/Cedula: '${email}', Password: '${password}'`);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {

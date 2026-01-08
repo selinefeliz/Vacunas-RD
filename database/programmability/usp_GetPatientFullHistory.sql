@@ -11,27 +11,27 @@ BEGIN
     FROM dbo.Tutor t
     WHERE t.id_Usuario = @id_Usuario;
 
-    -- Si no hay historial para el contexto solicitado, devolver conjuntos vacíos con la estructura correcta
+    -- Check if patient exists (medical history is now stored in Nino table)
     IF NOT EXISTS (
         SELECT 1
-        FROM dbo.HistoricoVacunas hv
+        FROM dbo.Nino n
+        LEFT JOIN dbo.TutorNino tn ON n.id_Nino = tn.id_Nino
         WHERE
-            (@id_Nino IS NOT NULL AND hv.id_Nino = @id_Nino)
+            (@id_Nino IS NOT NULL AND n.id_Nino = @id_Nino)
             OR
-            (@id_Nino IS NULL AND hv.id_Nino IN (SELECT tn.id_Nino FROM dbo.TutorNino tn WHERE tn.id_Tutor = @id_Tutor))
+            (@id_Nino IS NULL AND tn.id_Tutor = @id_Tutor)
     )
     BEGIN
         SELECT TOP 0
-            id_Historico,
-            id_Nino,
+            CAST(NULL AS INT) AS id_Historico,
+            CAST(NULL AS INT) AS id_Nino,
             CAST(NULL AS INT) AS id_Tutor,
             CAST(NULL AS NVARCHAR(201)) AS NombrePaciente,
             CAST(NULL AS DATE) AS FechaNacimiento,
             CAST(NULL AS INT) AS EdadActual,
-            NotasAdicionales,
-            Alergias,
-            CAST(NULL AS DATETIME2) AS FechaCreacion
-        FROM dbo.HistoricoVacunas;
+            CAST(NULL AS NVARCHAR(MAX)) AS NotasAdicionales,
+            CAST(NULL AS NVARCHAR(MAX)) AS Alergias,
+            CAST(NULL AS DATETIME2) AS FechaCreacion;
 
         SELECT TOP 0
             id_Historico,
@@ -47,34 +47,41 @@ BEGIN
             CAST(NULL AS TIME) AS HoraCita,
             CAST(NULL AS INT) AS DosisLimite,
             CAST(NULL AS BIGINT) AS NumeroDosis
-        FROM dbo.HistoricoCita;
+        FROM dbo.HistoricoCita WHERE 1=0;
 
         RETURN;
     END;
 
+
     -- Registros principales de historial médico
+    -- Now reading Alergias and NotasAdicionales from Nino table
     SELECT
-        hv.id_Historico,
-        hv.id_Nino,
+        n.id_Nino AS id_Historico,
+        n.id_Nino,
         tn.id_Tutor AS id_Tutor,
         CASE 
             WHEN @id_Nino IS NOT NULL THEN ISNULL(n.Nombres, '') + CASE WHEN n.Apellidos IS NOT NULL AND n.Apellidos <> '' THEN ' ' + n.Apellidos ELSE '' END
             ELSE ISNULL(t.Nombres, '') + CASE WHEN t.Apellidos IS NOT NULL AND t.Apellidos <> '' THEN ' ' + t.Apellidos ELSE '' END
         END AS NombrePaciente,
         n.FechaNacimiento,
-        CASE WHEN n.FechaNacimiento IS NOT NULL THEN DATEDIFF(YEAR, n.FechaNacimiento, GETDATE()) ELSE NULL END AS EdadActual,
-        hv.NotasAdicionales,
-        hv.Alergias,
-        cv.FechaCreacion AS FechaCreacion
-    FROM dbo.HistoricoVacunas hv
-    LEFT JOIN dbo.Nino n ON hv.id_Nino = n.id_Nino
-    LEFT JOIN dbo.TutorNino tn ON hv.id_Nino = tn.id_Nino
+        CASE 
+            WHEN n.FechaNacimiento IS NOT NULL THEN 
+                DATEDIFF(YEAR, n.FechaNacimiento, GETDATE()) - 
+                CASE WHEN DATEADD(YEAR, DATEDIFF(YEAR, n.FechaNacimiento, GETDATE()), n.FechaNacimiento) > GETDATE() 
+                THEN 1 ELSE 0 END
+            ELSE NULL 
+        END AS EdadActual,
+        n.NotasAdicionales,
+        n.Alergias,
+        GETDATE() AS FechaCreacion
+    FROM dbo.Nino n
+    LEFT JOIN dbo.TutorNino tn ON n.id_Nino = tn.id_Nino
     LEFT JOIN dbo.Tutor t ON tn.id_Tutor = t.id_Tutor
-    LEFT JOIN dbo.CitaVacunacion cv ON hv.id_Cita = cv.id_Cita
     WHERE
-        (@id_Nino IS NOT NULL AND hv.id_Nino = @id_Nino)
+        (@id_Nino IS NOT NULL AND n.id_Nino = @id_Nino)
         OR
-        (@id_Nino IS NULL AND hv.id_Nino IN (SELECT tn2.id_Nino FROM dbo.TutorNino tn2 WHERE tn2.id_Tutor = @id_Tutor));
+        (@id_Nino IS NULL AND n.id_Nino IN (SELECT tn2.id_Nino FROM dbo.TutorNino tn2 WHERE tn2.id_Tutor = @id_Tutor));
+
 
     -- Historial detallado de vacunación
     SELECT

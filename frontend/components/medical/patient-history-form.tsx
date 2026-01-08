@@ -123,12 +123,12 @@ export function PatientHistoryForm({ patientId, childId, patientName, birthDate,
               name="alergias"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Alergias Conocidas</FormLabel>
+                  <FormLabel className="text-gray-900">Alergias Conocidas</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Registre cualquier alergia conocida del paciente..."
                       {...field}
-                      className="bg-white"
+                      className="bg-white text-black"
                     />
                   </FormControl>
                   <FormMessage />
@@ -141,7 +141,7 @@ export function PatientHistoryForm({ patientId, childId, patientName, birthDate,
               name="notasAdicionales"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
+                  <FormLabel className="flex items-center gap-2 text-gray-900">
                     <FileText className="h-4 w-4" />
                     Notas Médicas Adicionales
                   </FormLabel>
@@ -149,7 +149,7 @@ export function PatientHistoryForm({ patientId, childId, patientName, birthDate,
                     <Textarea
                       placeholder="Condiciones médicas, medicamentos, observaciones importantes..."
                       {...field}
-                      className="bg-white"
+                      className="bg-white text-black"
                     />
                   </FormControl>
                   <FormMessage />

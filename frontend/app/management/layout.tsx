@@ -14,7 +14,7 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && (!isAuthenticated || !user || ![1, 2, 6].includes(user.id_Rol))) {
+        if (!loading && (!isAuthenticated || !user || ![1, 2, 3, 6].includes(user.id_Rol))) {
             router.push('/dashboard');
         }
     }, [isAuthenticated, user, loading, router]);
@@ -23,7 +23,7 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
         return <div>Loading...</div>;
     }
 
-    if (!isAuthenticated || !user || ![1, 2, 6].includes(user.id_Rol)) {
+    if (!isAuthenticated || !user || ![1, 2, 3, 6].includes(user.id_Rol)) {
         return null;
     }
 

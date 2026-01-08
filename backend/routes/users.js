@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
         }
 
         // --- 3. Enforce Business Logic ---
-        const rolesRequiringCenter = [2, 6]; // ID 2 for Medico, ID 6 for Personal
+        const rolesRequiringCenter = [2, 3, 6]; // ID 2: Medico, ID 3: Enfermera, ID 6: Personal
 
         if (rolesRequiringCenter.includes(numericRoleId)) {
             if (finalCenterId === null) {
@@ -174,7 +174,7 @@ router.post('/admin-create', [verifyToken, checkRole([1])], async (req, res) => 
             }
         }
 
-        const rolesRequiringCenter = [2, 6];
+        const rolesRequiringCenter = [2, 3, 6]; // Medico, Enfermera, Personal
         if (rolesRequiringCenter.includes(numericRoleId)) {
             if (finalCenterId === null) {
                 return res.status(400).json({ message: 'A Vaccination Center is mandatory for this role.' });
@@ -264,7 +264,7 @@ router.get('/:id/centers', [verifyToken], async (req, res) => {
 
         // Optional: Check if the requesting user is the user in the param or an admin
         if (req.user.id !== userId && req.user.roleId !== 1) {
-             return res.status(403).json({ message: 'Forbidden: You do not have access to this resource.' });
+            return res.status(403).json({ message: 'Forbidden: You do not have access to this resource.' });
         }
 
         const pool = await poolPromise;

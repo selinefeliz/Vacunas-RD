@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Syringe, Package, FileText, History } from "lucide-react"
+import { Calendar, Syringe, Package, FileText, History, XCircle } from "lucide-react"
 import { formatDateString, formatTimeString } from "@/utils/format-time"
 import { PatientHistoryForm } from "./patient-history-form"
 import { PatientHistoryView } from "./patient-history-view"
@@ -45,8 +45,6 @@ interface VaccineLot {
 const attendSchema = z.object({
   id_LoteVacuna: z.string().min(1, "Debe seleccionar un lote de vacuna"),
   dosisNumero: z.coerce.number().min(1, "El número de dosis debe ser mayor a 0"),
-  notasAdicionales: z.string().optional(),
-  alergias: z.string().optional(),
   requiereProximaDosis: z.boolean().default(false),
   fechaProximaDosis: z.string().optional(),
   agendarProximaCita: z.boolean().default(false),
@@ -66,6 +64,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
   const { toast } = useToast()
   const { request: fetchLots, loading: loadingLots } = useApi<VaccineLot[]>()
   const { request: attendAppointment, loading: attending } = useApi()
+  const { request: changeStatus, loading: changingStatus } = useApi() // New hook for changing status
   const { request: checkHistory } = useApi<any>()
 
   const [vaccineLots, setVaccineLots] = useState<VaccineLot[]>([])
@@ -73,14 +72,15 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
   const [showHistoryForm, setShowHistoryForm] = useState(false)
   const [patientHasHistory, setPatientHasHistory] = useState(false)
   const [activeTab, setActiveTab] = useState("attend")
+  const [notAdministeredReason, setNotAdministeredReason] = useState("")
+  const [showNotAdministeredDialog, setShowNotAdministeredDialog] = useState(false)
+  const [showConfirmVaccinationDialog, setShowConfirmVaccinationDialog] = useState(false) // State for the reason
 
   const form = useForm<z.infer<typeof attendSchema>>({
     resolver: zodResolver(attendSchema),
     defaultValues: {
       id_LoteVacuna: "",
       dosisNumero: 1,
-      notasAdicionales: "",
-      alergias: "",
       requiereProximaDosis: false,
       fechaProximaDosis: "",
       agendarProximaCita: false,
@@ -172,8 +172,6 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
         id_Cita: appointment.id_Cita,
         id_LoteVacuna: Number.parseInt(values.id_LoteVacuna),
         dosisNumero: values.dosisNumero,
-        notasAdicionales: values.notasAdicionales || "",
-        alergias: values.alergias || "",
         requiereProximaDosis: values.requiereProximaDosis,
         fechaProximaDosis: values.fechaProximaDosis || null,
         agendarProximaCita: values.agendarProximaCita,
@@ -196,6 +194,41 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
         variant: "destructive",
         title: "Error",
         description: "No se pudo procesar la atención de la cita",
+      })
+    }
+  }
+
+  const handleNotAdministered = async () => {
+    if (!notAdministeredReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Motivo requerido",
+        description: "Por favor indique el motivo por el cual no se suministró la vacuna.",
+      })
+      return
+    }
+
+    try {
+      await changeStatus("/api/medical/change-status", {
+        method: "POST",
+        body: {
+          id_Cita: appointment.id_Cita,
+          nuevoEstado: "No Suministrada",
+          notas: notAdministeredReason,
+        },
+      })
+
+      toast({
+        title: "Estado Actualizado",
+        description: "La cita ha sido marcada como No Suministrada.",
+      })
+      onSuccess()
+    } catch (error) {
+      console.error("Error changing status:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo actualizar el estado de la cita.",
       })
     }
   }
@@ -324,8 +357,19 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                             </FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccionar lote de vacuna" />
+                                <SelectTrigger className="h-auto py-2 text-left">
+                                  {field.value && vaccineLots.find(l => l.id_LoteVacuna.toString() === field.value) ? (
+                                    <div className="flex flex-col items-start gap-0.5">
+                                      <span className="font-medium text-sm">
+                                        Lote: {vaccineLots.find(l => l.id_LoteVacuna.toString() === field.value)?.NumeroLote}
+                                      </span>
+                                      <span className="text-xs text-gray-500 font-normal">
+                                        {vaccineLots.find(l => l.id_LoteVacuna.toString() === field.value)?.NombreFabricante} - Vence: {formatDateString(vaccineLots.find(l => l.id_LoteVacuna.toString() === field.value)?.FechaCaducidad || "")}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <SelectValue placeholder="Seleccionar lote de vacuna" />
+                                  )}
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -336,7 +380,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                                 ) : (
                                   vaccineLots.map((lot) => (
                                     <SelectItem key={lot.id_LoteVacuna} value={lot.id_LoteVacuna.toString()}>
-                                      <div className="flex flex-col">
+                                      <div className="flex flex-col items-start gap-0.5">
                                         <span className="font-medium">Lote: {lot.NumeroLote}</span>
                                         <span className="text-xs text-gray-500">
                                           {lot.NombreFabricante} - Vence: {formatDateString(lot.FechaCaducidad)}
@@ -366,7 +410,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                                 max={appointment.DosisLimite}
                                 {...field}
                                 readOnly
-                                className="bg-gray-50"
+                                className="bg-gray-50 text-black"
                               />
                             </FormControl>
                             <p className="text-xs text-gray-500">
@@ -378,39 +422,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="notasAdicionales"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notas Médicas</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Observaciones médicas, reacciones, comentarios adicionales..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
-                    <FormField
-                      control={form.control}
-                      name="alergias"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Alergias Detectadas</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Registre cualquier alergia detectada durante esta visita..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </CardContent>
                 </Card>
 
@@ -485,29 +497,110 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                   </Card>
                 )}
 
-                <DialogFooter>
+                <DialogFooter className="flex flex-col sm:flex-row gap-2">
                   <Button type="button" variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={attending || !patientHasHistory}>
-                    {attending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Procesando...
-                      </>
-                    ) : (
-                      <>
-                        <Syringe className="mr-2 h-4 w-4" />
-                        Completar Atención
-                      </>
-                    )}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setShowNotAdministeredDialog(true)}
+                    disabled={changingStatus}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    No Suministrada
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => setShowConfirmVaccinationDialog(true)}
+                    disabled={attending || !patientHasHistory}>
+
+                    <Syringe className="mr-2 h-4 w-4" />
+                    Confirmar Vacunación
                   </Button>
                 </DialogFooter>
               </form>
             </Form>
           </TabsContent>
+
         </Tabs>
       </DialogContent>
+
+      {/* Dialog for "No Suministrada" */}
+      <Dialog open={showNotAdministeredDialog} onOpenChange={setShowNotAdministeredDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Marcar como No Suministrada</DialogTitle>
+            <DialogDescription>
+              Por favor indique el motivo por el cual no se suministrará la vacuna.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Ej: Paciente presenta fiebre alta, rechazo del tutor, falta de insumos..."
+              value={notAdministeredReason}
+              onChange={(e) => setNotAdministeredReason(e.target.value)}
+              className="min-h-[120px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNotAdministeredDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!notAdministeredReason.trim()) {
+                  toast({
+                    variant: "destructive",
+                    title: "Motivo requerido",
+                    description: "Por favor indique el motivo.",
+                  })
+                  return
+                }
+                setShowNotAdministeredDialog(false)
+                handleNotAdministered()
+              }}
+              disabled={changingStatus}
+            >
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Vaccination Confirmation */}
+      <Dialog open={showConfirmVaccinationDialog} onOpenChange={setShowConfirmVaccinationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Confirmar Vacunación</DialogTitle>
+            <DialogDescription>
+              ¿Está seguro que desea registrar la aplicación de esta vacuna?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Esta acción registrará la vacuna como aplicada y actualizará el historial del paciente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmVaccinationDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                setShowConfirmVaccinationDialog(false)
+                form.handleSubmit(onSubmit)()
+              }}
+              disabled={attending}
+            >
+              Confirmar Vacunación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

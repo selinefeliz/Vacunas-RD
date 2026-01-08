@@ -4,7 +4,7 @@ const { sql, poolPromise } = require("../config/db")
 const { verifyToken, checkRole } = require("../middleware/authMiddleware")
 
 // GET /api/medical/appointments - Obtener citas médicas para el usuario autenticado (médico o personal del centro)
-router.get("/appointments", [verifyToken, checkRole([2, 5, 6])], async (req, res) => {
+router.get("/appointments", [verifyToken, checkRole([2, 3, 5, 6])], async (req, res) => {
   // Added role 5 for nurse
   try {
     const pool = await poolPromise
@@ -12,7 +12,7 @@ router.get("/appointments", [verifyToken, checkRole([2, 5, 6])], async (req, res
     const id_CentroVacunacion_Token = req.user.id_CentroVacunacion // For manager/nurse role
     let result
 
-    if (id_Rol === 2 || id_Rol === 5) {
+    if (id_Rol === 2 || id_Rol === 3 || id_Rol === 5) {
       // Medico or Enfermero
       // Médico/Enfermero: obtener citas por centro desde query param
       const { id_centro } = req.query
@@ -240,6 +240,56 @@ router.post("/attend-appointment", verifyToken, async (req, res) => {
     console.error("Error attending medical appointment:", error)
     res.status(500).json({
       error: "Error al procesar la atención médica",
+      details: error.message,
+    })
+  }
+})
+
+// POST /api/medical/change-status - Cambiar estado de cita (ej: No Suministrada)
+router.post("/change-status", verifyToken, async (req, res) => {
+  console.log("=== POST /api/medical/change-status ===")
+  console.log("Request body:", req.body)
+
+  try {
+    const { id_Cita, nuevoEstado, notas } = req.body
+    const id_UsuarioModifica = req.user?.id ?? req.user?.id_Usuario
+
+    if (!id_Cita || !nuevoEstado) {
+      return res.status(400).json({ error: "id_Cita y nuevoEstado son requeridos" })
+    }
+
+    const pool = await poolPromise
+
+    // 1. Get ID for the status name (e.g., 'No Suministrada')
+    const statusResult = await pool.request()
+      .input('Estado', sql.NVarChar(50), nuevoEstado)
+      .query("SELECT id_Estado FROM EstadoCita WHERE Estado = @Estado")
+
+    if (statusResult.recordset.length === 0) {
+      return res.status(400).json({ error: `El estado '${nuevoEstado}' no es válido.` })
+    }
+
+    const id_NuevoEstado = statusResult.recordset[0].id_Estado
+
+    // 2. Update status
+    const result = await pool.request()
+      .input("id_Cita", sql.Int, id_Cita)
+      .input("id_NuevoEstadoCita", sql.Int, id_NuevoEstado)
+      .input("id_UsuarioModifica", sql.Int, id_UsuarioModifica)
+      .input("Notas", sql.NVarChar(sql.MAX), notas || "")
+      .output("OutputMessage", sql.NVarChar(255))
+      .execute("dbo.usp_UpdateAppointmentStatus")
+
+    console.log("Status updated successfully:", result.output.OutputMessage)
+
+    res.json({
+      success: true,
+      message: result.output.OutputMessage,
+    })
+  } catch (error) {
+    console.error("Error updating appointment status:", error)
+    res.status(500).json({
+      error: "Error al actualizar el estado de la cita",
       details: error.message,
     })
   }

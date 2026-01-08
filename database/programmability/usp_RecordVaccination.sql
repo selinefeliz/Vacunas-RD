@@ -19,7 +19,7 @@ CREATE PROCEDURE dbo.usp_RecordVaccination
     @id_LoteAplicado INT,
     @NombreCompletoPersonalAplicado NVARCHAR(100), -- Name of person who physically administered, could be different
     @DosisAplicada NVARCHAR(50), -- e.g., '1st Dose', '2nd Dose', 'Booster'
-    @EdadAlMomento NVARCHAR(20), -- e.g., '2 años, 3 meses'
+    @EdadAlMomento NVARCHAR(20), -- e.g., '2 años, 3 meses' (ignored, calculated internally)
     @NotasAdicionales NVARCHAR(MAX) = NULL,
     @Alergias NVARCHAR(MAX) = NULL,
 
@@ -83,6 +83,76 @@ BEGIN
         RETURN;
     END
 
+    -- AUTO-FILL DATA: Fetch Allergies, Notes and BirthDate from Nino/HistoricoMedico
+    DECLARE @FechaNacimiento DATE;
+    DECLARE @ExistingAlergias NVARCHAR(MAX);
+    DECLARE @ExistingNotas NVARCHAR(MAX);
+
+    SELECT 
+        @FechaNacimiento = n.FechaNacimiento,
+        -- Prioritize HistoricoMedico (autofilled table), fallback to Nino
+        @ExistingAlergias = ISNULL(hm.Alergias, n.Alergias),
+        @ExistingNotas = ISNULL(hm.NotasAdicionales, n.NotasAdicionales)
+    FROM dbo.Nino n
+    LEFT JOIN dbo.HistoricoMedico hm ON n.id_Nino = hm.id_Nino
+    WHERE n.id_Nino = @id_Nino;
+
+    -- Use existing data if parameters are empty/null (which they are from frontend now)
+    IF @Alergias IS NULL OR @Alergias = '' SET @Alergias = @ExistingAlergias;
+    IF @NotasAdicionales IS NULL OR @NotasAdicionales = '' SET @NotasAdicionales = @ExistingNotas;
+
+    -- CALCULATE AGE
+    DECLARE @EdadRegistroMeses INT;
+    DECLARE @CalculatedEdadAlMomento NVARCHAR(50);
+
+    IF @FechaNacimiento IS NOT NULL
+    BEGIN
+        -- Calculate accurate months
+        SET @EdadRegistroMeses = DATEDIFF(MONTH, @FechaNacimiento, @FechaAplicacion);
+        
+        -- Adjust if day of month hasn't passed in the target month (approximate check)
+        IF DAY(@FechaAplicacion) < DAY(@FechaNacimiento)
+        BEGIN
+            SET @EdadRegistroMeses = @EdadRegistroMeses - 1;
+        END
+
+        -- Determine text representation 'X años Y meses'
+        DECLARE @Anios INT;
+        DECLARE @MesesRestantes INT;
+
+        IF @EdadRegistroMeses < 0 SET @EdadRegistroMeses = 0; -- Safety check
+        
+        SET @Anios = @EdadRegistroMeses / 12;
+        SET @MesesRestantes = @EdadRegistroMeses % 12;
+        
+        IF @Anios > 0
+        BEGIN
+            SET @CalculatedEdadAlMomento = CAST(@Anios AS NVARCHAR(10)) + ' año' + CASE WHEN @Anios > 1 THEN 's' ELSE '' END;
+            IF @MesesRestantes > 0
+                SET @CalculatedEdadAlMomento = @CalculatedEdadAlMomento + ', ' + CAST(@MesesRestantes AS NVARCHAR(10)) + ' mes' + CASE WHEN @MesesRestantes > 1 THEN 'es' ELSE '' END;
+        END
+        ELSE
+        BEGIN
+            -- Less than 1 year
+            IF @MesesRestantes > 0
+                SET @CalculatedEdadAlMomento = CAST(@MesesRestantes AS NVARCHAR(10)) + ' mes' + CASE WHEN @MesesRestantes > 1 THEN 'es' ELSE '' END;
+            ELSE
+            BEGIN
+                -- Less than 1 month (days)
+                DECLARE @Dias INT = DATEDIFF(DAY, @FechaNacimiento, @FechaAplicacion);
+                SET @CalculatedEdadAlMomento = CAST(@Dias AS NVARCHAR(10)) + ' día' + CASE WHEN @Dias > 1 THEN 's' ELSE '' END;
+            END
+        END
+    END
+    ELSE
+    BEGIN
+        SET @EdadRegistroMeses = 0;
+        SET @CalculatedEdadAlMomento = 'N/A';
+    END
+
+    -- Override the parameter with our calculation
+    SET @EdadAlMomento = @CalculatedEdadAlMomento;
+
     BEGIN TRANSACTION;
 
     BEGIN TRY
@@ -102,34 +172,37 @@ BEGIN
         -- Insert into HistoricoVacunas and capture the new ID
         DECLARE @New_id_Historico INT;
 
+        -- Including EdadRegistroMeses now as requested
         INSERT INTO dbo.HistoricoVacunas (
-    id_Nino,
-    id_Cita,
-    FechaAplicacion,
-    DosisAplicada,
-    EdadAlMomento,
-    VacunaNombre,
-    FabricanteNombre,
-    LoteNumero,
-    PersonalSaludNombre,
-    FirmaDigital,
-    NotasAdicionales,
-    Alergias
-)
-VALUES (
-    @id_Nino,
-    @id_Cita,
-    @FechaAplicacion,
-    @DosisAplicada,
-    @EdadAlMomento,
-    @VacunaNombre,
-    @FabricanteNombre,
-    @LoteNumero,
-    @NombreCompletoPersonalAplicado,
-    NULL,
-    @NotasAdicionales,
-    @Alergias
-);
+            id_Nino,
+            id_Cita,
+            FechaAplicacion,
+            DosisAplicada,
+            EdadAlMomento,
+            EdadRegistroMeses, 
+            VacunaNombre,
+            FabricanteNombre,
+            LoteNumero,
+            PersonalSaludNombre,
+            FirmaDigital,
+            NotasAdicionales,
+            Alergias
+        )
+        VALUES (
+            @id_Nino,
+            @id_Cita,
+            @FechaAplicacion,
+            @DosisAplicada,
+            @EdadAlMomento,
+            @EdadRegistroMeses,
+            @VacunaNombre,
+            @FabricanteNombre,
+            @LoteNumero,
+            @NombreCompletoPersonalAplicado,
+            NULL,
+            @NotasAdicionales,
+            @Alergias
+        );
 
 
         SET @New_id_Historico = SCOPE_IDENTITY();

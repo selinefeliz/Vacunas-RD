@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation" 
+import { useRouter } from "next/navigation"
 import useApi from "@/hooks/use-api"
 import { useAuth } from "@/context/auth-context"
 import { useToast } from "@/components/ui/use-toast"
@@ -250,12 +250,18 @@ export function MedicalAppointmentsView() {
               </span>
             </CardDescription>
           </div>
-          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
-            {appointment.EstadoCita}
-          </Badge>
+          {['Cancelada', 'Cancelada por Paciente', 'Cancelada por Centro', 'No Asistio', 'No Suministrada'].includes(appointment.EstadoCita) ? (
+            <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 border-none">
+              {appointment.EstadoCita}
+            </Badge>
+          ) : (
+            <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
+              {appointment.EstadoCita}
+            </Badge>
+          )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className={['Cancelada', 'Cancelada por Paciente', 'Cancelada por Centro', 'No Asistio', 'No Suministrada'].includes(appointment.EstadoCita) ? 'opacity-75' : ''}>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Syringe className="h-4 w-4 text-blue-500" />
@@ -273,9 +279,11 @@ export function MedicalAppointmentsView() {
             </div>
           )}
           <div className="flex justify-end pt-2">
-            <Button onClick={() => handleAttendAppointment(appointment)} className="flex items-center gap-2">
-              <Syringe className="h-4 w-4" />
-              Atender Paciente
+            <Button
+              onClick={() => handleAttendAppointment(appointment)}
+              variant={['Cancelada', 'Cancelada por Paciente', 'Cancelada por Centro', 'No Asistio', 'No Suministrada'].includes(appointment.EstadoCita) ? "outline" : "default"}
+            >
+              {['Cancelada', 'Cancelada por Paciente', 'Cancelada por Centro', 'No Asistio', 'No Suministrada'].includes(appointment.EstadoCita) ? "Ver Detalles" : "Atender Paciente"}
             </Button>
           </div>
         </div>

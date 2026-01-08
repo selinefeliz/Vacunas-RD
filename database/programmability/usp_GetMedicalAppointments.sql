@@ -63,7 +63,8 @@ BEGIN
       -- AND (cv.id_PersonalSalud IS NULL OR cv.id_PersonalSalud = @id_PersonalSalud) 
       
       -- Filter by Status: Show 'Agendada' (Scheduled) and 'Confirmada' (Confirmed)
-      AND ec.Estado IN ('Agendada', 'Confirmada')
+      -- Filter by Status: Show 'Agendada', 'Confirmada', and cancellations/no-shows for context
+      AND ec.Estado IN ('Agendada', 'Confirmada', 'Cancelada', 'Cancelada por Paciente', 'Cancelada por Centro', 'No Asistio', 'No Suministrada')
     ORDER BY cv.Fecha ASC, cv.Hora ASC;
 END
 GO

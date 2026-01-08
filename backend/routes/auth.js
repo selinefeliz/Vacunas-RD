@@ -48,15 +48,16 @@ router.post('/login', async (req, res) => {
             { expiresIn: '1h' }
         );
 
-        res.json({ 
-            message: 'Login successful', 
-            token, 
-            user: { 
-                id: user.id_Usuario, 
-                email: user.Email, 
-                role: user.NombreRol, 
-                id_Rol: user.id_Rol, 
-                id_CentroVacunacion: user.id_CentroVacunacion 
+        res.json({
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id_Usuario,
+                email: user.Email,
+                role: user.NombreRol,
+                id_Rol: user.id_Rol,
+                id_CentroVacunacion: user.id_CentroVacunacion,
+                NombreCentro: user.NombreCentro // Added for automated context setting
             }
         });
 

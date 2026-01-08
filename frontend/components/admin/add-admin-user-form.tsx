@@ -25,7 +25,7 @@ const formSchema = z
   })
   .refine(
     (data) => {
-      if (data.id_Rol === "2" || data.id_Rol === "6") {
+      if (data.id_Rol === "2" || data.id_Rol === "6" || data.id_Rol === "3") {
         return !!data.id_CentroVacunacion && data.id_CentroVacunacion.length > 0
       }
       return true
@@ -119,7 +119,7 @@ export function AddAdminUserForm({ onSuccess }: { onSuccess: () => void }) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const payload = {
       ...values,
-      id_CentroVacunacion: selectedRole === "2" || selectedRole === "6" ? values.id_CentroVacunacion : null,
+      id_CentroVacunacion: selectedRole === "2" || selectedRole === "6" || selectedRole === "3" ? values.id_CentroVacunacion : null,
       additionalCenters: selectedRole === "2" ? values.additionalCenters?.map((c) => c.id) : [],
     }
 
@@ -274,7 +274,7 @@ export function AddAdminUserForm({ onSuccess }: { onSuccess: () => void }) {
             )}
           />
 
-          {(selectedRole === "2" || selectedRole === "6") && (
+          {(selectedRole === "2" || selectedRole === "6" || selectedRole === "3") && (
             <FormField
               control={form.control}
               name="id_CentroVacunacion"
