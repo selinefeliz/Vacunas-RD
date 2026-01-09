@@ -213,7 +213,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
         method: "POST",
         body: {
           id_Cita: appointment.id_Cita,
-          nuevoEstado: "No Suministrada",
+          nuevoEstado: "Cancelada por Centro",
           notas: notAdministeredReason,
         },
       })

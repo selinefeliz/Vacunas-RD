@@ -26,7 +26,7 @@ router.get('/', verifyToken, async (req, res) => {
             console.log(`[DEBUG] Force-overriding Center ID from ${id_CentroVacunacion} to 3`);
 
             result = await pool.request()
-                .input('id_CentroVacunacion', sql.Int, 3) // Hardcoded 3
+                .input('id_CentroVacunacion', sql.Int, id_CentroVacunacion)
                 .execute('usp_GetAppointmentsByCenter');
         } else {
             // For Tutors and regular users (Role 5)

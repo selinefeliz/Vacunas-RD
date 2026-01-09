@@ -3,6 +3,7 @@ import { Calendar, Clock, UserCheck, Stethoscope, AlertCircle } from "lucide-rea
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { combineDateTime, formatDisplayDate, formatTimeString, formatDateString } from "@/utils/format-time";
+import { useAuth } from "@/context/auth-context";
 
 export interface Appointment {
   id_Cita: number;
@@ -27,6 +28,8 @@ interface Props {
 }
 
 export default function AppointmentCard({ appointment, className, variant = "list" }: Props) {
+  const { user } = useAuth();
+
   return (
     <div
       className={cn(
@@ -94,7 +97,9 @@ export default function AppointmentCard({ appointment, className, variant = "lis
                 ? "bg-green-100 text-green-800"
                 : appointment.EstadoCita === "Agendada"
                   ? "bg-yellow-100 text-yellow-800"
-                  : "bg-primary/10 text-primary"
+                  : appointment.EstadoCita.includes("Cancelada")
+                    ? "bg-red-100 text-red-800"
+                    : "bg-primary/10 text-primary"
             )}
           >
             {appointment.EstadoCita}
@@ -116,7 +121,9 @@ export default function AppointmentCard({ appointment, className, variant = "lis
                 ? "bg-green-100 text-green-800"
                 : appointment.EstadoCita === "Agendada"
                   ? "bg-yellow-100 text-yellow-800"
-                  : "bg-primary/10 text-primary"
+                  : appointment.EstadoCita.includes("Cancelada")
+                    ? "bg-red-100 text-red-800"
+                    : "bg-primary/10 text-primary"
             )}
           >
             {appointment.EstadoCita}

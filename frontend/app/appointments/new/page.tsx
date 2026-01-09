@@ -280,11 +280,21 @@ export default function NewAppointmentPage() {
                         </SelectItem>
                       ))
                   ) : appointmentFor === "self" ? (
-                    vaccines?.map((vaccine) => (
-                      <SelectItem key={vaccine.id_Vacuna} value={vaccine.id_Vacuna.toString()}>
-                        {vaccine.Nombre}
+                    vaccines
+                      ?.filter(v => !['BCG', 'Rotavirus', 'Pentavalente', 'Polio', 'SRP', 'Neumococo', 'DPT', 'Hepatitis B'].includes(v.Nombre))
+                      .length > 0 ? (
+                      vaccines
+                        ?.filter(v => !['BCG', 'Rotavirus', 'Pentavalente', 'Polio', 'SRP', 'Neumococo', 'DPT', 'Hepatitis B'].includes(v.Nombre))
+                        .map((vaccine) => (
+                          <SelectItem key={vaccine.id_Vacuna} value={vaccine.id_Vacuna.toString()}>
+                            {vaccine.Nombre}
+                          </SelectItem>
+                        ))
+                    ) : (
+                      <SelectItem value="no-adult-vaccines" disabled>
+                        No hay vacunas disponibles para adultos
                       </SelectItem>
-                    ))
+                    )
                   ) : (
                     <SelectItem value="no-vaccines" disabled>
                       {formData.id_Nino ? "No hay vacunas pendientes para agendar" : "Seleccione un niño"}

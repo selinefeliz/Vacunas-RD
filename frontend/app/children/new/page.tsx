@@ -27,7 +27,7 @@ export default function NewChildPage() {
     FechaNacimiento: "",
     Genero: "",
     DireccionResidencia: "",
-    CodigoIdentificacionPropio: "", // Optional field
+
   });
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function NewChildPage() {
       if (result && result.CodigoActivacion) {
         setActivationCode(result.CodigoActivacion);
         toast({ title: "Niño registrado con éxito", description: "El código de activación se muestra a continuación." });
-        setFormData({ Nombres: "", Apellidos: "", FechaNacimiento: "", Genero: "", DireccionResidencia: "", CodigoIdentificacionPropio: "" }); // Reset form
+        setFormData({ Nombres: "", Apellidos: "", FechaNacimiento: "", Genero: "", DireccionResidencia: "" }); // Reset form
       } else {
         throw new Error(apiError || 'No se recibió el código de activación.');
       }
@@ -135,10 +135,7 @@ export default function NewChildPage() {
               <Label htmlFor="DireccionResidencia">Dirección de Residencia</Label>
               <Input id="DireccionResidencia" name="DireccionResidencia" value={formData.DireccionResidencia} onChange={handleChange} required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="CodigoIdentificacionPropio">Código de Identificación (Opcional)</Label>
-              <Input id="CodigoIdentificacionPropio" name="CodigoIdentificacionPropio" value={formData.CodigoIdentificacionPropio} onChange={handleChange} />
-            </div>
+
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={formLoading || authLoading}>

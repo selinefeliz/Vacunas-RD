@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatDisplayDate, formatTimeString } from "@/utils/format-time"
+import { formatDisplayDate, formatTimeString, formatDateString } from "@/utils/format-time"
 
 export default function CenterStaffDashboard() {
     const { user, loading: authLoading } = useAuth()
@@ -141,36 +141,9 @@ export default function CenterStaffDashboard() {
             }
         }
 
-        // DEMO MODE: Duplicate Detection Simulation
-        const existingLot = lots.find(l => l.NumeroLote === newLot.NumeroLote);
-        if (existingLot) {
-            const addedQty = parseInt(newLot.CantidadInicial);
-            setLots(prev => prev.map(l => {
-                if (l.NumeroLote === newLot.NumeroLote) {
-                    return {
-                        ...l,
-                        CantidadInicial: l.CantidadInicial + addedQty,
-                        CantidadDisponible: l.CantidadDisponible + addedQty
-                    }
-                }
-                return l;
-            }));
-
-            alert(`¡Lote actualizado! Se han sumado ${addedQty} dosis al stock existente`);
-
-            setIsAddLotOpen(false);
-            setNewLot({
-                id_VacunaCatalogo: "",
-                NumeroLote: "",
-                FechaCaducidad: "",
-                CantidadInicial: ""
-            });
-            setLotError("");
-            return; // Exit without calling API
-        }
-
+        // Duplicate check is now handled by the backend (Upsert Logic)
         try {
-            await apiRequest('/api/inventory/lots', {
+            const result = await apiRequest('/api/inventory/lots', {
                 method: 'POST',
                 body: {
                     ...newLot,
@@ -179,6 +152,10 @@ export default function CenterStaffDashboard() {
                     id_VacunaCatalogo: parseInt(newLot.id_VacunaCatalogo)
                 }
             })
+
+            // Show success message (either Created or Updated)
+            alert(result.message || 'Lote registrado/actualizado exitosamente');
+
             setIsAddLotOpen(false)
             fetchDashboardData() // Refresh
             setNewLot({
@@ -439,7 +416,20 @@ export default function CenterStaffDashboard() {
                                         <Label htmlFor="vacuna">Vacuna</Label>
                                         <Select
                                             value={newLot.id_VacunaCatalogo}
-                                            onValueChange={(val) => setNewLot({ ...newLot, id_VacunaCatalogo: val })}
+                                            onValueChange={(val) => {
+                                                const selectedVaccine = vaccines.find(v => v.id_Vacuna.toString() === val);
+                                                let generatedLot = "";
+                                                if (selectedVaccine) {
+                                                    const prefix = selectedVaccine.Nombre.substring(0, 3).toUpperCase();
+                                                    const randomNum = Math.floor(10000 + Math.random() * 90000); // 5 digit random number
+                                                    generatedLot = `${prefix}-${randomNum}`;
+                                                }
+                                                setNewLot({
+                                                    ...newLot,
+                                                    id_VacunaCatalogo: val,
+                                                    NumeroLote: generatedLot
+                                                });
+                                            }}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar vacuna" />
@@ -459,7 +449,8 @@ export default function CenterStaffDashboard() {
                                             id="lote"
                                             value={newLot.NumeroLote}
                                             onChange={(e) => setNewLot({ ...newLot, NumeroLote: e.target.value })}
-                                            placeholder="Ej. AB-12345"
+                                            readOnly={false}
+                                            placeholder="Se generará automáticamente (Editable)"
                                             required
                                         />
                                     </div>
@@ -527,7 +518,7 @@ export default function CenterStaffDashboard() {
                                             </div>
                                             <div>{lot.NumeroLote}</div>
                                             <div className={new Date(lot.FechaCaducidad) < new Date() ? "text-red-500 font-bold" : ""}>
-                                                {formatDisplayDate(new Date(lot.FechaCaducidad))}
+                                                {formatDateString(lot.FechaCaducidad)}
                                             </div>
                                             <div className="text-right text-muted-foreground">{lot.CantidadInicial}</div>
                                             <div className="text-right font-bold">
