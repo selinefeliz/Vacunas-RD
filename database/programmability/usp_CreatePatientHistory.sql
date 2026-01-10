@@ -13,21 +13,6 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
         
-        DECLARE @id_Tutor INT;
-        
-        -- Get the tutor ID from the user ID
-        SELECT @id_Tutor = id_Tutor
-        FROM dbo.Tutor
-        WHERE id_Usuario = @id_Usuario;
-        
-        IF @id_Tutor IS NULL
-        BEGIN
-            SET @Success = 0;
-            SET @OutputMessage = 'No se encontró un tutor asociado al usuario proporcionado.';
-            ROLLBACK TRANSACTION;
-            RETURN;
-        END
-        
         -- Validate id_Nino is provided
         IF @id_Nino IS NULL
         BEGIN
@@ -36,19 +21,22 @@ BEGIN
             ROLLBACK TRANSACTION;
             RETURN;
         END
-        
-        -- Validate child belongs to tutor
-        IF NOT EXISTS (
-            SELECT 1 
-            FROM dbo.TutorNino 
-            WHERE id_Tutor = @id_Tutor AND id_Nino = @id_Nino
-        )
+
+        -- Check if child exists
+        IF NOT EXISTS (SELECT 1 FROM dbo.Nino WHERE id_Nino = @id_Nino)
         BEGIN
             SET @Success = 0;
-            SET @OutputMessage = 'El niño no pertenece al tutor especificado.';
+            SET @OutputMessage = 'El niño especificado no existe.';
             ROLLBACK TRANSACTION;
             RETURN;
         END
+        
+        /* 
+           REMOVED: Strict Tutor validation. 
+           This SP is used by Medical Staff who should be able to init history 
+           regardless of the User ID passed (which might be the Tutor or the Doctor).
+           Authentication checks are done at the API level.
+        */
         
         -- Update child's medical information in Nino table
         -- This serves as the "medical history" - one record per patient

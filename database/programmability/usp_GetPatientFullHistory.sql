@@ -54,7 +54,7 @@ BEGIN
 
 
     -- Registros principales de historial médico
-    -- Now reading Alergias and NotasAdicionales from Nino table
+    -- Now reading Alergias and NotasAdicionales from HistoricoMedico table (source of truth for history existence)
     SELECT
         n.id_Nino AS id_Historico,
         n.id_Nino,
@@ -71,12 +71,13 @@ BEGIN
                 THEN 1 ELSE 0 END
             ELSE NULL 
         END AS EdadActual,
-        n.NotasAdicionales,
-        n.Alergias,
-        GETDATE() AS FechaCreacion
+        hm.NotasAdicionales,
+        hm.Alergias,
+        hm.FechaCreacion -- Will be NULL if no history exists
     FROM dbo.Nino n
     LEFT JOIN dbo.TutorNino tn ON n.id_Nino = tn.id_Nino
     LEFT JOIN dbo.Tutor t ON tn.id_Tutor = t.id_Tutor
+    LEFT JOIN dbo.HistoricoMedico hm ON n.id_Nino = hm.id_Nino -- Join with History table
     WHERE
         (@id_Nino IS NOT NULL AND n.id_Nino = @id_Nino)
         OR

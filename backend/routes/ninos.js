@@ -5,6 +5,49 @@ const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 
 // --- Specific Routes First ---
 
+// GET /find - Search for children by name/lastname (Medical/Admin only)
+router.get('/find', [verifyToken, checkRole([1, 2, 3])], async (req, res) => {
+    try {
+        console.log('[DEBUG] GET /find hit');
+        console.log('[DEBUG] Query params:', req.query);
+        const { q } = req.query;
+        // Allow empty search to return list
+        const searchTerm = q ? `%${q}%` : '%';
+
+        const pool = await connectDB();
+        const request = pool.request();
+        request.input('searchTerm', sql.NVarChar(100), searchTerm);
+
+        // Searching in Nino table and joining with Tutor to allow searching by Parent/Tutor name
+        // Also getting the Tutor User ID for context
+        const query = `
+            SELECT DISTINCT TOP 20 
+                n.id_Nino, 
+                n.Nombres, 
+                n.Apellidos, 
+                n.FechaNacimiento, 
+                n.Genero, 
+                n.DireccionResidencia,
+                t.id_Usuario AS id_Tutor_Usuario,
+                t.Nombres AS NombreTutor,
+                t.Apellidos AS ApellidoTutor
+            FROM dbo.Nino n
+            LEFT JOIN dbo.TutorNino tn ON n.id_Nino = tn.id_Nino
+            LEFT JOIN dbo.Tutor t ON tn.id_Tutor = t.id_Tutor
+            WHERE (n.Nombres LIKE @searchTerm OR n.Apellidos LIKE @searchTerm)
+               OR (t.Nombres LIKE @searchTerm OR t.Apellidos LIKE @searchTerm)
+            ORDER BY n.Nombres, n.Apellidos
+        `;
+
+        const result = await request.query(query);
+        res.json(result.recordset);
+
+    } catch (err) {
+        console.error('[NINOS] Error on GET /search:', err);
+        res.status(500).send({ message: 'Error al buscar niños.', error: err.message });
+    }
+});
+
 // POST / - Register a new child
 router.post('/', [verifyToken, checkRole([5, 1])], async (req, res) => {
     try {
@@ -240,7 +283,7 @@ router.get('/:id', [verifyToken, checkRole([1, 2, 5])], async (req, res) => {
         const id = parseInt(req.params.id);
 
         if (isNaN(id)) {
-            return res.status(400).send({ message: 'ID de niño inválido.' });
+            return res.status(400).send({ message: 'INVALID CHILD ID (FALLTHROUGH)' });
         }
 
         const pool = await connectDB();

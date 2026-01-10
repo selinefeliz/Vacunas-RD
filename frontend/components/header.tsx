@@ -29,15 +29,15 @@ export default function Header() {
   const { theme } = useTheme()
 
   const dashboardPath = useMemo(() => {
-    if (user?.id_Rol === 2) { // Medico
-      return "/medical/select-center";
+    if (user?.id_Rol === 2 || user?.id_Rol === 3) { // Medico or Enfermera
+      return "/management/medical/select-center";
     }
     return "/dashboard";
   }, [user]);
 
   const isDashboardActive = useMemo(() => {
-    if (user?.id_Rol === 2) { // Medico
-      return pathname === "/management/medical/appointments" || pathname === "/medical/select-center"
+    if (user?.id_Rol === 2 || user?.id_Rol === 3) { // Medico or Enfermera
+      return pathname.startsWith("/management/medical") || pathname === "/medical/select-center"
     }
     return pathname === "/dashboard"
   }, [pathname, user]);
@@ -71,8 +71,8 @@ export default function Header() {
                 {user ? (
                   <>
                     <Link
-                      href="/dashboard"
-                      className={`text-sm font-medium transition-colors hover:text-primary ${pathname === "/dashboard" ? "text-primary" : "text-muted-foreground"
+                      href={dashboardPath}
+                      className={`text-sm font-medium transition-colors hover:text-primary ${isDashboardActive ? "text-primary" : "text-muted-foreground"
                         }`}
                     >
                       Dashboard

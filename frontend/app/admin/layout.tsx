@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-screen bg-background">
     <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-    <p className="ml-4 text-lg">Loading & Verifying Access...</p>
+    <p className="ml-4 text-lg">Cargando y Verificando Acceso...</p>
   </div>
 );
 
@@ -27,9 +27,9 @@ function AdminSidebar() {
 
   const navItems = [
     { href: '/admin', label: 'Dashboard' },
-    { href: '/admin/users', label: 'Users' },
-    { href: '/admin/centers', label: 'Vaccination Centers' },
-    { href: '/admin/audit-log', label: 'Audit Log' },
+    { href: '/admin/users', label: 'Usuarios' },
+    { href: '/admin/centers', label: 'Centros de Vacunación' },
+    { href: '/admin/audit-log', label: 'Historial de Auditoría' },
   ];
 
   return (
@@ -48,7 +48,7 @@ function AdminSidebar() {
           ))}
         </div>
         <Button onClick={handleLogout} variant="destructive">
-          Logout
+          Cerrar Sesión
         </Button>
       </nav>
     </aside>

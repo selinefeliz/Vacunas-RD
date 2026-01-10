@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     Nombres: "",
     Apellidos: "",
+    FechaNacimiento: "",
     TipoIdentificacion: "Cédula",
     NumeroIdentificacion: "",
     Telefono: "",
@@ -27,6 +28,7 @@ export default function RegisterPage() {
   })
 
   const router = useRouter()
+  const { login } = useAuth()
   const { toast } = useToast()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,9 +39,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    console.log("Starting registration process...", formData);
 
     try {
-      const response = await fetch("http://localhost:3001/api/tutors", {
+      // 1. Register User
+      const registerResponse = await fetch("http://localhost:3001/api/tutors", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,18 +51,56 @@ export default function RegisterPage() {
         body: JSON.stringify(formData),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
+      console.log("Register response status:", registerResponse.status);
+
+      if (!registerResponse.ok) {
+        const errorData = await registerResponse.json()
+        console.error("Registration failed:", errorData);
         throw new Error(errorData.message || "Error al registrar usuario")
       }
 
+      console.log("Registration successful. Triggering toast...");
       toast({
         title: "Registro exitoso",
-        description: "Su cuenta ha sido creada correctamente. Ahora puede iniciar sesión.",
+        description: "Su cuenta ha sido creada correctamente. Iniciando sesión...",
       })
 
-      router.push("/login")
+      // 2. Auto Login
+      console.log("Attempting auto-login with:", { LoginIdentifier: formData.Username });
+      const loginResponse = await fetch("http://localhost:3001/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          LoginIdentifier: formData.Username,
+          Password: formData.Password
+        }),
+      })
+
+      console.log("Login response status:", loginResponse.status);
+
+      if (!loginResponse.ok) {
+        const loginError = await loginResponse.text();
+        console.error("Auto-login failed. Response:", loginError);
+        toast({
+          title: "Registro completado",
+          description: "Por favor inicie sesión con sus credenciales.",
+        });
+        router.push("/login");
+        return;
+      }
+
+      const loginData = await loginResponse.json();
+      console.log("Auto-login successful. User data:", loginData.user);
+
+      // 3. Set Auth Context
+      console.log("Setting auth context...");
+      // The login function in context handles setting user/token and redirecting
+      login(loginData.token, loginData.user);
+
     } catch (error) {
+      console.error("Process error:", error);
       toast({
         variant: "destructive",
         title: "Error de registro",
@@ -110,6 +152,21 @@ export default function RegisterPage() {
                 <Input id="Apellidos" name="Apellidos" value={formData.Apellidos} onChange={handleChange} required />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="FechaNacimiento">Fecha de Nacimiento</Label>
+              <Input
+                id="FechaNacimiento"
+                name="FechaNacimiento"
+                type="date"
+                value={formData.FechaNacimiento}
+                onChange={handleChange}
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Debe ser mayor de 18 años.</p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="Telefono">Teléfono</Label>
               <Input id="Telefono" name="Telefono" value={formData.Telefono} onChange={handleChange} required />

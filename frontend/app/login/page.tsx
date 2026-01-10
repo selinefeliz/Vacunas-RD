@@ -79,14 +79,14 @@ export default function LoginPage() {
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <Card className="w-full max-w-md p-8 space-y-4">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Login as Administrator</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Modo Administrador</CardTitle>
             <CardDescription className="text-center">
-              You have successfully logged in as an administrator. Please choose your destination.
+              Has iniciado sesión correctamente como administrador. Por favor elige tu destino.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col space-y-4">
-            <Button onClick={() => router.push('/dashboard')}>Go to Personal Tutor View</Button>
-            <Button onClick={() => router.push('/admin/login')} variant="secondary">Proceed to Admin Portal</Button>
+            <Button onClick={() => router.push('/dashboard')}>Ir a Vista Personal (Tutor)</Button>
+            <Button onClick={() => router.push('/admin/login')} variant="secondary">Ir al Portal Administrativo</Button>
           </CardContent>
         </Card>
       </div>

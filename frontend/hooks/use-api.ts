@@ -53,8 +53,15 @@ const useApi = <T = any>() => {
           if (response.status === 401 || response.status === 403) {
             logout();
           }
-          const errorData = await response.json().catch(() => ({ message: response.statusText }));
-          console.error(`API Error ${response.status} on ${endpoint}:`, errorData);
+          const text = await response.text();
+          let errorData = { message: response.statusText };
+          try {
+            errorData = JSON.parse(text);
+          } catch (e) {
+            console.warn("Failed to parse error JSON:", text);
+            errorData = { message: text || response.statusText };
+          }
+          console.error(`API Error ${response.status} on ${endpoint}:`, errorData, "Raw:", text);
           throw new Error(errorData.message || 'An error occurred');
         }
 

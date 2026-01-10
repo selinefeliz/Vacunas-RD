@@ -25,10 +25,10 @@ export default function UsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">User Management</h1>
+        <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>Add User</Button>
+            <Button>Agregar Usuario</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -45,8 +45,8 @@ export default function UsersPage() {
         </Dialog>
       </div>
 
-      {isLoading && <p>Loading users...</p>}
-      {error && <p className="text-red-500">Failed to load users: {error}</p>}
+      {isLoading && <p>Cargando usuarios...</p>}
+      {error && <p className="text-red-500">Error al cargar usuarios: {error}</p>}
 
       {users && (
         <div className="overflow-x-auto">
@@ -54,9 +54,9 @@ export default function UsersPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Correo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Rol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">

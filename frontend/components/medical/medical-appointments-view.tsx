@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, Clock, User, Syringe, MapPin, AlertCircle, ArrowLeft } from "lucide-react"
 import { AttendAppointmentModal } from "./attend-appointment-modal"
+import { PatientHistoryView } from "@/components/medical/patient-history-view"
 import type { MedicalAppointment } from "@/types/medical"
 
 export function MedicalAppointmentsView() {
@@ -22,6 +23,58 @@ export function MedicalAppointmentsView() {
   const [appointments, setAppointments] = useState<MedicalAppointment[]>([])
   const [selectedAppointment, setSelectedAppointment] = useState<MedicalAppointment | null>(null)
   const [isAttendModalOpen, setIsAttendModalOpen] = useState(false)
+
+  // State for Patient History Tab
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedPatient, setSelectedPatient] = useState<any | null>(null)
+
+  // Reuse the useApi hook for search
+  const { request: searchChildren, loading: searchLoading } = useApi<any[]>()
+
+  // Initial load for patients
+  useEffect(() => {
+    // Optional: Load initial patients? Or wait for tab? 
+    // User requested "sales un listado de todos" if not searched.
+    // Let's do it on mount or when tab changes.
+    handleSearch(true)
+  }, [])
+
+  const handleSearch = async (isInitial = false) => {
+    // Allow empty search
+    if (!searchQuery.trim() && !isInitial && searchQuery !== "") {
+      // Only return if not initial and truly empty? No, we want empty search to work manually too
+    }
+
+    setIsSearching(true);
+    setSelectedPatient(null);
+    try {
+      const data = await searchChildren(`/api/ninos/find?q=${encodeURIComponent(searchQuery)}`);
+      setSearchResults(data || []);
+      if (data && data.length === 0 && !isInitial) {
+        toast({
+          title: "Sin resultados",
+          description: "No se encontraron pacientes.",
+        });
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error al buscar pacientes.",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    handleSearch(); // Reload all
+    setSelectedPatient(null);
+  };
 
   const loadAppointments = useCallback(async () => {
     if (!user?.id || !selectedCenter?.id_CentroVacunacion) {
@@ -299,6 +352,7 @@ export function MedicalAppointmentsView() {
     )
   }
 
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
@@ -313,7 +367,7 @@ export function MedicalAppointmentsView() {
       </div>
 
       <Tabs defaultValue="today" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="today" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Citas de Hoy ({todayAppointments.length})
@@ -322,7 +376,12 @@ export function MedicalAppointmentsView() {
             <Clock className="h-4 w-4" />
             Próximas Citas ({upcomingAppointments.length})
           </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Historial Pacientes
+          </TabsTrigger>
         </TabsList>
+
         <TabsContent value="today" className="space-y-4">
           <Card>
             <CardHeader>
@@ -344,6 +403,7 @@ export function MedicalAppointmentsView() {
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value="upcoming" className="space-y-4">
           <Card>
             <CardHeader>
@@ -365,6 +425,84 @@ export function MedicalAppointmentsView() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Búsqueda de Pacientes (Niños)</CardTitle>
+              <CardDescription>Busque un niño para ver su historial de vacunación completo.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o apellido..."
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-9"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                </div>
+                <Button onClick={() => handleSearch()} disabled={searchLoading || (!searchQuery.trim() && searchResults.length === 0 && !selectedPatient)}>
+                  {searchLoading ? "Buscando..." : "Buscar"}
+                </Button>
+                {searchResults.length > 0 && (
+                  <Button variant="ghost" onClick={clearSearch}>
+                    Limpiar
+                  </Button>
+                )}
+              </div>
+
+              {/* Resultados de búsqueda */}
+              {!selectedPatient && searchResults.length > 0 && (
+                <div className="border rounded-md divide-y">
+                  {searchResults.map((child) => (
+                    <div
+                      key={child.id_Nino}
+                      className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center transition-colors"
+                      onClick={() => setSelectedPatient(child)}
+                    >
+                      <div>
+                        <p className="font-medium">{child.Nombres} {child.Apellidos}</p>
+                        <p className="text-sm text-muted-foreground text-xs">
+                          <span className="mr-3">Nacimiento: {new Date(child.FechaNacimiento).toLocaleDateString()}</span>
+                          <span>Género: {child.Genero === 'M' ? 'Masculino' : 'Femenino'}</span>
+                        </p>
+                        {child.NombreTutor && (
+                          <p className="text-xs text-blue-600 mt-0.5">
+                            Tutor: {child.NombreTutor} {child.ApellidoTutor}
+                          </p>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm">Ver Historial</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Vista de Historial */}
+              {selectedPatient && (
+                <div className="mt-6 animation-fade-in">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">Historial Médico</h3>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedPatient(null)}>
+                      <ArrowLeft className="mr-2 h-3 w-3" />
+                      Volver a resultados
+                    </Button>
+                  </div>
+                  {/* Import dynamically to avoid circular dependencies if any, though regular import is fine here */}
+                  <PatientHistoryView
+                    patientId={selectedPatient.id_Tutor_Usuario || 0}
+                    childId={selectedPatient.id_Nino}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
       {selectedAppointment && (
         <AttendAppointmentModal

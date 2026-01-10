@@ -56,8 +56,8 @@ router.post("/patient-full-history", async (req, res) => {
   try {
     const { id_Usuario, id_Nino } = req.body
 
-    if (!id_Usuario) {
-      return res.status(400).json({ error: "id_Usuario es requerido" })
+    if (!id_Usuario && !id_Nino) {
+      return res.status(400).json({ error: "id_Usuario o id_Nino es requerido" })
     }
 
     const pool = await poolPromise
@@ -94,8 +94,9 @@ router.post("/create-patient-history", async (req, res) => {
   try {
     const { id_Usuario, id_Nino, FechaNacimiento, Alergias, NotasAdicionales } = req.body
 
-    if (!id_Usuario || !FechaNacimiento) {
-      return res.status(400).json({ error: "id_Usuario y fechaNacimiento son requeridos" })
+    // We relaxed the requirement for id_Usuario (Tutor ID) in the SP, so we don't enforce it here strictly if id_Nino is present
+    if (!id_Nino || !FechaNacimiento) {
+      return res.status(400).json({ error: "id_Nino y FechaNacimiento son requeridos" })
     }
 
     const pool = await poolPromise

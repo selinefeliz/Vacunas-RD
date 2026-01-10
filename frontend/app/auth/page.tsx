@@ -45,6 +45,7 @@ export default function AuthPage() {
     NumeroIdentificacion: "", // Mapped from 'Cédula' in UI
     Nombres: "",
     Apellidos: "",
+    FechaNacimiento: "", // Added field
     Telefono: "",
     Direccion: "",
     Email: "",
@@ -221,16 +222,39 @@ export default function AuthPage() {
 
       toast({
         title: "Registro exitoso",
-        description: "Su cuenta ha sido creada correctamente. Por favor, inicie sesión.",
+        description: "Su cuenta ha sido creada correctamente. Iniciando sesión...",
       });
-      // Optionally, switch to login tab or clear form
-      // For now, just clear form and show success, user can then click on login tab
-      setRegisterFormData({
-        Nombres: "", Apellidos: "", NumeroIdentificacion: "", Telefono: "",
-        Direccion: "", Email: "", Username: "", Password: "",
-      });
-      setRegisterConfirmPassword("");
-      // Consider switching tab: document.querySelector('[data-radix-collection-item][value="login"]')?.click();
+
+      // Auto-login logic
+      try {
+        const loginResponse = await fetch("http://localhost:3001/api/auth/login", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            LoginIdentifier: registerFormData.Username,
+            Password: registerFormData.Password
+          }),
+        });
+
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          login(loginData.token, loginData.user);
+          return; // login function handles redirection
+        } else {
+          console.warn("Auto-login failed after registration");
+          // Fallback to manual login
+          setRegisterFormData({
+            Nombres: "", Apellidos: "", NumeroIdentificacion: "", Telefono: "",
+            Direccion: "", Email: "", Username: "", Password: "", FechaNacimiento: ""
+          });
+          setRegisterConfirmPassword("");
+          // Switch tab logic if possible, or just stay here with success message
+        }
+      } catch (loginErr) {
+        console.error("Auto-login error", loginErr);
+      }
     } catch (error: any) {
       setRegisterError(error.message || "Ocurrió un error inesperado durante el registro.");
       toast({
@@ -474,6 +498,24 @@ export default function AuthPage() {
                         <Label htmlFor="Apellidos" className="text-gray-700 dark:text-gray-300">Apellidos</Label>
                         <Input id="Apellidos" name="Apellidos" placeholder="Tus apellidos" value={registerFormData.Apellidos} onChange={handleRegisterChange} required className="bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="register-FechaNacimiento" className="text-gray-700 dark:text-gray-300">Fecha de Nacimiento</Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="register-FechaNacimiento"
+                          name="FechaNacimiento"
+                          type="date"
+                          value={registerFormData.FechaNacimiento}
+                          onChange={handleRegisterChange}
+                          required
+                          max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                          className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Debe ser mayor de 18 años.</p>
                     </div>
 
                     <div className="space-y-2">

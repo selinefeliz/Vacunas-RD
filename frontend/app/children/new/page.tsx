@@ -115,7 +115,15 @@ export default function NewChildPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="FechaNacimiento">Fecha de Nacimiento</Label>
-                <Input id="FechaNacimiento" name="FechaNacimiento" type="date" value={formData.FechaNacimiento} onChange={handleChange} required />
+                <Input
+                  id="FechaNacimiento"
+                  name="FechaNacimiento"
+                  type="date"
+                  value={formData.FechaNacimiento}
+                  onChange={handleChange}
+                  max={new Date().toISOString().split("T")[0]}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="Genero">Género</Label>

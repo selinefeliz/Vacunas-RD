@@ -156,6 +156,18 @@ BEGIN
     BEGIN TRANSACTION;
 
     BEGIN TRY
+        -- UPSERT into HistoricoMedico (Ensure medical profile exists/updates)
+        MERGE dbo.HistoricoMedico AS target
+        USING (SELECT @id_Nino AS id_Nino) AS source
+        ON (target.id_Nino = source.id_Nino)
+        WHEN MATCHED THEN
+            UPDATE SET 
+                Alergias = @Alergias, -- Update with latest provided (or existing if null logic above)
+                NotasAdicionales = @NotasAdicionales,
+                FechaActualizacion = GETDATE()
+        WHEN NOT MATCHED THEN
+            INSERT (id_Nino, Alergias, NotasAdicionales, FechaCreacion, FechaActualizacion)
+            VALUES (@id_Nino, @Alergias, @NotasAdicionales, GETDATE(), GETDATE());
         -- Update CitaVacunacion
         UPDATE dbo.CitaVacunacion
         SET id_EstadoCita = @id_EstadoCita_Asistida,

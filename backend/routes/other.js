@@ -25,7 +25,7 @@ router.post('/tutors', async (req, res) => {
     console.log(`[ROUTE HANDLER] POST /api/tutors reached in other.js`); // <-- ADD THIS LOG
     console.log(`Accessed POST /api/tutors with body: ${JSON.stringify(req.body)}`);
 
-    const { Nombres, Apellidos, TipoIdentificacion, NumeroIdentificacion, Telefono, Direccion, Email, Username } = req.body;
+    const { Nombres, Apellidos, TipoIdentificacion, NumeroIdentificacion, Telefono, Direccion, Email, Username, FechaNacimiento } = req.body;
     const password = req.body.Password || req.body.password;
 
     if (!Nombres || !Apellidos || !NumeroIdentificacion || !Email || !password || !Username) {
@@ -44,8 +44,9 @@ router.post('/tutors', async (req, res) => {
             .input('Telefono_Tutor', sql.NVarChar(20), Telefono)
             .input('Email_Tutor', sql.NVarChar(100), Email)
             .input('Direccion_Tutor', sql.NVarChar(200), Direccion)
+            .input('FechaNacimiento', sql.Date, FechaNacimiento || null) // Added parameter
             .input('Email_Usuario', sql.NVarChar(100), Email)
-            .input('Username', sql.NVarChar(100), Username) // Passed to new SP parameter
+            .input('Username', sql.NVarChar(100), Username)
             .input('Clave_Usuario', sql.NVarChar(255), hashedPassword)
             .output('OutputMessage', sql.NVarChar(255))
             .output('New_id_Usuario', sql.Int)

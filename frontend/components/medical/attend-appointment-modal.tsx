@@ -104,8 +104,8 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
           },
         });
         // The API returns an object { medicalHistory, vaccinationHistory }.
-        // We check if medicalHistory is not null.
-        if (data && data.medicalHistory) {
+        // We check if medicalHistory.FechaCreacion is not null to confirm it has been initialized.
+        if (data && data.medicalHistory && data.medicalHistory.FechaCreacion) {
           hasHistory = true;
         } else {
           hasHistory = false;
@@ -244,6 +244,17 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
 
   const isLastDose = currentDose >= appointment.DosisLimite
 
+  // Date check
+  const appointmentDate = new Date(appointment.Fecha);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  appointmentDate.setHours(0, 0, 0, 0);
+
+  // Check if appointment is in the future relative to today
+  // We use the string format if available to be safer on timezones, but date object comparison works for simple day check if normalized
+  const safeFutureCheck = appointmentDate > today;
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -259,7 +270,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="attend" disabled={!patientHasHistory}>
+            <TabsTrigger value="attend" disabled={!patientHasHistory || safeFutureCheck}>
               <Syringe className="h-4 w-4 mr-2" />
               Atender Cita
             </TabsTrigger>
@@ -287,6 +298,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                 patientId={patientId}
                 childId={appointment.id_Nino}
                 showVaccinesOnly={false}
+                hideVaccinationSection={true}
               />
             )}
           </TabsContent>

@@ -118,7 +118,7 @@ export default function AdminDashboardPage() {
                       alert.priority === "high" ? "destructive" : alert.priority === "medium" ? "default" : "secondary"
                     }
                   >
-                    {alert.priority}
+                    {alert.priority === "high" ? "Alta" : alert.priority === "medium" ? "Media" : "Baja"}
                   </Badge>
                 </div>
               )) : (
