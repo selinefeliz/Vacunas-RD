@@ -296,4 +296,274 @@ router.post("/change-status", verifyToken, async (req, res) => {
   }
 })
 
+
+// POST /api/medical/patient-history-pdf - Generar PDF del historial de vacunación
+router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], async (req, res) => {
+  // console.log("=== POST /api/medical/patient-history-pdf ===")
+  // console.log("Request body:", req.body)
+
+  try {
+    const { id_Usuario, id_Nino } = req.body
+
+    if (!id_Usuario && !id_Nino) {
+      return res.status(400).json({ error: "id_Usuario o id_Nino es requerido" })
+    }
+
+    const pool = await poolPromise
+
+    const result = await pool
+      .request()
+      .input("id_Usuario", sql.Int, id_Usuario)
+      .input("id_Nino", sql.Int, id_Nino || null)
+      .execute("dbo.usp_GetPatientFullHistory")
+
+    const medicalHistory = result.recordsets[0] ? result.recordsets[0][0] : null
+    const vaccinationHistory = result.recordsets[1] || []
+
+    // console.log("🔍 [PDF GEN] Medical History Data:", medicalHistory);
+    // console.log("🔍 [PDF GEN] Vaccination History Sample:", vaccinationHistory[0]);
+
+    if (!medicalHistory) {
+      return res.status(404).json({ error: "No se encontró historial médico para este paciente." })
+    }
+
+    // Extra info fetch removed as per user request to simplify and remove ID/Age fields
+
+
+    // Launch Puppeteer
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+
+    // HTML Template
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+            
+            body {
+                font-family: 'Inter', sans-serif;
+                margin: 0;
+                padding: 40px;
+                color: #1e293b;
+                line-height: 1.5;
+            }
+            
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid #0f172a;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .title-section h1 {
+                font-size: 24px;
+                color: #0f172a;
+                margin: 0;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            
+            .title-section p {
+                font-size: 12px;
+                color: #64748b;
+                margin: 5px 0 0 0;
+            }
+            
+            .logo-section {
+                text-align: right;
+            }
+            
+            .patient-card {
+                background-color: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 20px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .info-group label {
+                display: block;
+                font-size: 11px;
+                color: #64748b;
+                text-transform: uppercase;
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            
+            .info-group div {
+                font-size: 16px;
+                font-weight: 600;
+                color: #334155;
+            }
+            
+            .section-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: #0f172a;
+                margin-bottom: 15px;
+                border-left: 4px solid #3b82f6;
+                padding-left: 10px;
+            }
+            
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 30px;
+                font-size: 13px;
+            }
+            
+            thead th {
+                background-color: #f1f5f9;
+                text-align: left;
+                padding: 12px;
+                color: #475569;
+                font-weight: 600;
+                border-bottom: 2px solid #e2e8f0;
+            }
+            
+            tbody td {
+                padding: 12px;
+                border-bottom: 1px solid #e2e8f0;
+                color: #334155;
+            }
+            
+            tbody tr:nth-child(even) {
+                background-color: #fafbfc;
+            }
+            
+            .chip {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 9999px;
+                font-size: 11px;
+                font-weight: 600;
+                background-color: #dbeafe;
+                color: #1e40af;
+            }
+
+            .footer {
+                margin-top: 50px;
+                text-align: center;
+                font-size: 10px;
+                color: #94a3b8;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="title-section">
+                <h1>Historial de Vacunación</h1>
+                <p>Reporte Oficial del Sistema Nacional de Vacunación</p>
+            </div>
+            <div class="logo-section">
+                <!-- Placeholder for Logo or additional info -->
+                <div style="font-weight: bold; font-size: 20px; color: #3b82f6;">VAC-RD</div>
+                <div style="font-size: 10px; color: #64748b;">${new Date().toLocaleDateString()}</div>
+            </div>
+        </div>
+
+        <div class="patient-card">
+            <div class="info-group">
+                <label>Paciente</label>
+                <div>${medicalHistory.NombrePaciente}</div>
+            </div>
+            <div class="info-group">
+                <label>Fecha de Nacimiento</label>
+                <div>${new Date(medicalHistory.FechaNacimiento).toLocaleDateString()}</div>
+            </div>
+
+        </div>
+
+        <h2 class="section-title">Registro de Dosis Aplicadas</h2>
+
+        ${vaccinationHistory.length > 0 ? `
+        <table>
+            <thead>
+                <tr>
+                    <th>Vacuna</th>
+                    <th>Dosis</th>
+                    <th>Fecha Aplicación</th>
+                    <th>Lote</th>
+                    <th>Centro / Personal</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${vaccinationHistory.map(vac => `
+                <tr>
+                    <td>
+                        <div style="font-weight: bold;">${vac.Vacuna}</div>
+                    </td>
+                    <td><span class="chip">${vac.NumeroDosis} ${vac.DosisLimite ? `de ${vac.DosisLimite}` : ''}</span></td>
+                    <td>${new Date(vac.FechaAplicacion).toLocaleDateString()}</td>
+                    <td>${vac.NumeroLote || 'N/A'}</td>
+                    <td>
+                        <div>${vac.CentroMedico}</div>
+                        <div style="font-size: 10px; color: #64748b;">Aplicado por: ${vac.NombreCompletoPersonal}</div>
+                    </td>
+                </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        ` : `
+        <div style="padding: 20px; text-align: center; color: #64748b; background-color: #f8fafc; border-radius: 8px;">
+            Este paciente no tiene registros de vacunación aún.
+        </div>
+        `}
+
+        <div class="footer">
+            <p>Este documento es un reporte generado electrónicamente. No requiere firma ni sello húmedo.</p>
+            <p>Generado por: ${req.user.role === 1 ? 'Administrador' : 'Personal Médico'} | ID de Referencia: ${Date.now()}</p>
+        </div>
+    </body>
+    </html>
+    `;
+
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: {
+        top: '20px',
+        bottom: '20px',
+        left: '20px',
+        right: '20px'
+      }
+    });
+
+    await browser.close();
+
+    // Send PDF
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=Historial_Vacunacion_${id_Nino}.pdf`,
+      'Content-Length': pdfBuffer.length
+    });
+
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("Error generating PDF:", error)
+    res.status(500).json({
+      error: "Error al generar el PDF del historial",
+      details: error.message,
+    })
+  }
+})
+
 module.exports = router

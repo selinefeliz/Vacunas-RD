@@ -1,7 +1,7 @@
-"use client"
-
+import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/context/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -55,9 +55,50 @@ const mockVaccinationHistory = [
 export function VaccinationHistoryModal({ open, onOpenChange, patient }: VaccinationHistoryModalProps) {
   if (!patient) return null
 
-  const generateDigitalCard = () => {
-    // Here you would generate PDF
-    console.log("Generating digital vaccination card for:", patient.patientName)
+  const { token } = useAuth()
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  const generateDigitalCard = async () => {
+    if (!patient || !token) return;
+
+    try {
+      setIsGenerating(true)
+      console.log("Generating digital vaccination card for:", patient.patientName)
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+      const response = await fetch(`${apiUrl}/api/medical/patient-history-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id_Nino: patient.patientId || patient.id, // Adaptation for different mock/real data structures
+          id_Usuario: null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error generating PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Historial_Vacunacion_${patient.patientName.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert("Error al generar el PDF. Por favor intente nuevamente.");
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -110,9 +151,15 @@ export function VaccinationHistoryModal({ open, onOpenChange, patient }: Vaccina
                   </CardTitle>
                   <CardDescription>Registro cronológico de todas las vacunas aplicadas</CardDescription>
                 </div>
-                <Button onClick={generateDigitalCard}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Carné Digital (PDF)
+                <Button onClick={generateDigitalCard} disabled={isGenerating}>
+                  {isGenerating ? (
+                    <>Generando...</>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Carné Digital (PDF)
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>

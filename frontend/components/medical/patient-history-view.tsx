@@ -4,13 +4,14 @@ import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { User, Calendar, Syringe, MapPin, Clock, Pencil, Plus } from "lucide-react"
+import { User, Calendar, Syringe, MapPin, Clock, Pencil, Plus, Download } from "lucide-react"
 import { formatDateString, formatTimeString } from "@/utils/format-time"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { useAuth } from "@/context/auth-context"
 
 interface PatientHistory {
   id_Historico: number
@@ -52,6 +53,12 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
 
   const [patientHistory, setPatientHistory] = useState<PatientHistory | null>(null)
   const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([])
+
+  // Edit State
+  const { user, token } = useAuth()
+
+  // PDF Generation State
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   // Edit State
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -143,6 +150,51 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
         title: "Error",
         description: "Error al guardar el historial",
       })
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!childId || !token) return;
+
+    try {
+      setIsGeneratingPDF(true)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+      const response = await fetch(`${apiUrl}/api/medical/patient-history-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id_Nino: childId,
+          id_Usuario: null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error generating PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Historial_Vacunacion_${patientHistory?.NombrePaciente.replace(/\s+/g, '_') || 'Paciente'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error al generar el PDF. Por favor intente nuevamente.",
+      })
+    } finally {
+      setIsGeneratingPDF(false)
     }
   }
 
@@ -361,13 +413,27 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
       {!hideVaccinationSection && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Syringe className="h-5 w-5" />
-              Historial de Vacunación
-            </CardTitle>
-            <CardDescription>
-              Registro completo de vacunas aplicadas ({vaccinationRecords.length} registros)
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Syringe className="h-5 w-5" />
+                  Historial de Vacunación
+                </CardTitle>
+                <CardDescription>
+                  Registro completo de vacunas aplicadas ({vaccinationRecords.length} registros)
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isGeneratingPDF}>
+                {isGeneratingPDF ? (
+                  <>Generando...</>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Imprimir (PDF)
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {vaccinationRecords.length > 0 ? (
