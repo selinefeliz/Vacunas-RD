@@ -24,7 +24,9 @@ BEGIN
         F.Fabricante AS NombreFabricante,
         L.FechaCaducidad,
         L.CantidadInicial,
-        L.CantidadDisponible
+        L.CantidadDisponible,
+        L.CantidadMinimaAlerta,
+        L.CantidadMaximaCapacidad
     FROM
         dbo.Lote AS L
     INNER JOIN

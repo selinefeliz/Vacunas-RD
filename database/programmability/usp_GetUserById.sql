@@ -11,7 +11,10 @@ BEGIN
         u.id_Rol,
         r.Rol AS NombreRol,
         u.id_Estado,
-        es.Estado AS NombreEstado
+        es.Estado AS NombreEstado,
+        u.Nombre,
+        u.Apellido,
+        u.id_CentroVacunacion  -- Added this field
     FROM
         Usuario u
     INNER JOIN

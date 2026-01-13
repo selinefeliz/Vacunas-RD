@@ -10,7 +10,10 @@ BEGIN
         u.id_Rol,
         r.Rol AS NombreRol,
         u.id_Estado,
-        es.Estado AS NombreEstado
+        es.Estado AS Estado,       -- Changed alias to 'Estado' to match frontend
+        es.Estado AS NombreEstado, -- Keep this just in case
+        u.Nombre,
+        u.Apellido
     FROM
         Usuario u
     INNER JOIN

@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const { sql, poolPromise } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
+const { logAudit } = require('../utils/audit');
 
 const router = express.Router();
 
@@ -118,16 +119,54 @@ router.get('/roles', [verifyToken, checkRole([1])], async (req, res) => {
 router.put('/:id', [verifyToken, checkRole([1])], async (req, res) => {
     try {
         const { id } = req.params;
-        const { id_Rol, id_Estado, Cedula_Usuario, Email } = req.body;
+        const { id_Rol, id_Estado, Cedula_Usuario, Email, id_CentroVacunacion, additionalCenters, Nombre, Apellido } = req.body;
+
+        const numericRoleId = parseInt(id_Rol, 10);
+        let finalCenterId = null;
+        if (id_CentroVacunacion != null && id_CentroVacunacion !== '') {
+            const parsed = parseInt(id_CentroVacunacion, 10);
+            if (!isNaN(parsed)) finalCenterId = parsed;
+        }
+
+        // Logic for roles 2,3,6 requiring center
+        const rolesRequiringCenter = [2, 3, 6];
+        if (rolesRequiringCenter.includes(numericRoleId) && finalCenterId === null) {
+            return res.status(400).json({ message: 'A Vaccination Center is mandatory for this role.' });
+        }
+        if (!rolesRequiringCenter.includes(numericRoleId)) {
+            finalCenterId = null;
+        }
 
         const pool = await poolPromise;
-        await pool.request()
+        const request = pool.request();
+
+        // Handle additional centers TVP
+        const tvp = new sql.Table('MedicoCentrosType');
+        tvp.columns.add('id_Centro', sql.Int);
+
+        if ((numericRoleId === 2 || numericRoleId === 3 || numericRoleId === 6) && Array.isArray(additionalCenters)) {
+            additionalCenters.forEach(id => {
+                const parsedId = parseInt(id, 10);
+                if (!isNaN(parsedId)) {
+                    tvp.rows.add(parsedId);
+                }
+            });
+        }
+        request.input('additionalCenters', tvp);
+
+        await request
             .input('id_Usuario', sql.Int, id)
             .input('id_Rol', sql.Int, id_Rol)
             .input('id_Estado', sql.Int, id_Estado)
             .input('Cedula_Usuario', sql.NVarChar(15), Cedula_Usuario)
             .input('Email', sql.NVarChar(100), Email)
-            .execute('usp_UpdateUser');
+            .input('id_CentroVacunacion', sql.Int, finalCenterId)
+            // If Nombre/Apellido are passed (edit form should probably allow them if creating did)
+            .input('Nombre', sql.NVarChar(100), Nombre || null)
+            .input('Apellido', sql.NVarChar(100), Apellido || null)
+            .execute('usp_UpdateAdminUser');
+
+        await logAudit(req, 'UPDATE', 'Usuario', id, `Actualizó usuario con Cédula: ${Cedula_Usuario}`);
 
         res.status(200).send({ message: 'User updated successfully.' });
     } catch (err) {
@@ -144,6 +183,8 @@ router.delete('/:id', [verifyToken, checkRole([1])], async (req, res) => {
         await pool.request()
             .input('id_Usuario', sql.Int, id)
             .execute('usp_DeleteUser');
+
+        await logAudit(req, 'DELETE', 'Usuario', id, 'Desactivó/Eliminó usuario');
 
         res.status(200).send({ message: 'User deactivated successfully.' });
     } catch (err) {
@@ -189,8 +230,8 @@ router.post('/admin-create', [verifyToken, checkRole([1])], async (req, res) => 
         const pool = await poolPromise;
         const request = pool.request();
 
-        // Handle additional centers for Medico role
-        if (numericRoleId === 2 && Array.isArray(additionalCenters) && additionalCenters.length > 0) {
+        // Handle additional centers for Medico (2), Nurse (3), and Personal del Centro (6)
+        if ((numericRoleId === 2 || numericRoleId === 3 || numericRoleId === 6) && Array.isArray(additionalCenters) && additionalCenters.length > 0) {
             const tvp = new sql.Table('MedicoCentrosType');
             tvp.columns.add('id_Centro', sql.Int);
             additionalCenters.forEach(id => {
@@ -218,6 +259,9 @@ router.post('/admin-create', [verifyToken, checkRole([1])], async (req, res) => 
             .execute('usp_CreateAdminUser');
 
         const newUser = result.recordset[0];
+
+        await logAudit(req, 'CREATE', 'Usuario', newUser.id_Usuario, `Creó usuario ${Nombre} ${Apellido} (${Email})`);
+
         res.status(201).json({ message: 'User created successfully via admin endpoint.', userId: newUser.id_Usuario });
 
     } catch (err) {
@@ -263,7 +307,7 @@ router.get('/:id/centers', [verifyToken], async (req, res) => {
         }
 
         // Optional: Check if the requesting user is the user in the param or an admin
-        if (req.user.id !== userId && req.user.roleId !== 1) {
+        if (req.user.id !== userId && req.user.id_Rol !== 1) {
             return res.status(403).json({ message: 'Forbidden: You do not have access to this resource.' });
         }
 

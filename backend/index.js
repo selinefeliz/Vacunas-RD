@@ -28,6 +28,7 @@ const manufacturerRoutes = require('./routes/manufacturerRoutes'); // Added this
 const medicalRoutes = require('./routes/medical'); // Medical routes for healthcare personnel
 const cedulaRoutes = require('./routes/cedula'); // Dominican ID validation Routes
 const territoryRoutes = require('./routes/territories'); // Territorial division Routes
+const auditLogRoutes = require('./routes/auditLog'); // Audit Log Routes
 
 // Initialize Express app
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/inventory', verifyToken, inventoryRoutes); // Inventory routes
 app.use('/api/vaccine-catalog', verifyToken, vaccineCatalogRoutes); // Added this line
 app.use('/api/manufacturers', verifyToken, manufacturerRoutes); // Added this line
 app.use('/api/medical', verifyToken, medicalRoutes); // Medical appointments and patient history
+app.use('/api/audit-log', verifyToken, auditLogRoutes); // Audit Log Routes
 app.use('/api', otherRoutes); // For /vaccines, /tutors, etc. Individual routes within otherRoutes handle their own protection.
 
 // Basic route

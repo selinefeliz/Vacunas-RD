@@ -10,13 +10,30 @@ router.post('/lots', [verifyToken, checkRole([1, 6])], async (req, res) => {
         id_CentroVacunacion,
         NumeroLote,
         FechaCaducidad,
-        CantidadInicial
+        CantidadInicial,
+        CantidadMinimaAlerta,
+        CantidadMaximaCapacidad
     } = req.body;
 
     // Simple validation
     if (!id_VacunaCatalogo || !id_CentroVacunacion || !NumeroLote || !FechaCaducidad || !CantidadInicial) {
-        return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
+        return res.status(400).json({ message: 'Todos los campos básicos son obligatorios.' });
     }
+
+    // Server-side validation for range rule (optional, as SP does it too, but good for faster feedback)
+    if (CantidadMaximaCapacidad && CantidadInicial > CantidadMaximaCapacidad) {
+        return res.status(400).json({ message: 'La cantidad inicial no puede exceder la capacidad máxima.' });
+    }
+    if (CantidadMinimaAlerta && CantidadInicial < CantidadMinimaAlerta) {
+        return res.status(400).json({ message: 'La cantidad inicial no puede ser menor a la cantidad mínima de alerta.' });
+    }
+
+    // Explicitly parse thresholds to numbers or defaults
+    const parsedMin = (CantidadMinimaAlerta !== undefined && CantidadMinimaAlerta !== null && CantidadMinimaAlerta !== "") ? parseInt(CantidadMinimaAlerta, 10) : 10;
+    const parsedMax = (CantidadMaximaCapacidad !== undefined && CantidadMaximaCapacidad !== null && CantidadMaximaCapacidad !== "") ? parseInt(CantidadMaximaCapacidad, 10) : null;
+
+    // Debug log
+    console.log('POST /lots processed values:', { id_VacunaCatalogo, id_CentroVacunacion, NumeroLote, FechaCaducidad, CantidadInicial, parsedMin, parsedMax });
 
     try {
         const pool = await poolPromise;
@@ -26,6 +43,8 @@ router.post('/lots', [verifyToken, checkRole([1, 6])], async (req, res) => {
             .input('NumeroLote', sql.NVarChar(100), NumeroLote)
             .input('FechaCaducidad', sql.Date, FechaCaducidad)
             .input('CantidadInicial', sql.Int, CantidadInicial)
+            .input('CantidadMinimaAlerta', sql.Int, parsedMin)
+            .input('CantidadMaximaCapacidad', sql.Int, parsedMax)
             .execute('usp_AddLote');
 
         res.status(201).json({ message: 'Lote registrado exitosamente.', loteId: result.recordset[0].NuevoLoteID });

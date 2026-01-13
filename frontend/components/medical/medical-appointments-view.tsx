@@ -50,12 +50,15 @@ export function MedicalAppointmentsView() {
     setIsSearching(true);
     setSelectedPatient(null);
     try {
-      const data = await searchChildren(`/api/ninos/find?q=${encodeURIComponent(searchQuery)}`);
+      // Add id_centro to filter by center if available
+      const centerParam = selectedCenter?.id_CentroVacunacion ? `&id_centro=${selectedCenter.id_CentroVacunacion}` : "";
+      const data = await searchChildren(`/api/ninos/find?q=${encodeURIComponent(searchQuery)}${centerParam}`);
+
       setSearchResults(data || []);
       if (data && data.length === 0 && !isInitial) {
         toast({
           title: "Sin resultados",
-          description: "No se encontraron pacientes.",
+          description: "No se encontraron pacientes registrados en este centro.",
         });
       }
     } catch (error) {

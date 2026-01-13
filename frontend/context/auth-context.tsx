@@ -10,7 +10,7 @@ interface User {
   role: string;
   id_Rol: number;
   id_CentroVacunacion?: number;
-  NombreCentro?: string; // Added to support auto-context setting
+  NombreCentro?: string;
 }
 
 interface MedicalCenter {
@@ -72,27 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('[AuthContext] User object received in login:', JSON.stringify(newUser, null, 2));
 
     // Force center selection logic
-    if (newUser.id_Rol === 2) { // Doctor -> Must select center from list (often has multiple)
+    if (newUser.id_Rol === 2 || newUser.id_Rol === 3 || newUser.id_Rol === 6) { // Doctor, Nurse, or Staff -> Must select center
       localStorage.removeItem('selectedCenter');
       setSelectedCenterState(null);
-      router.push('/admin/inventory');
-    }
-    else if (newUser.id_Rol === 3) { // Nurse -> Skip selection screen, auto-set center
-      if (newUser.id_CentroVacunacion && newUser.NombreCentro) {
-        console.log('[AuthContext] Auto-setting center for Nurse:', newUser.NombreCentro);
-        const autoCenter: MedicalCenter = {
-          id_CentroVacunacion: newUser.id_CentroVacunacion,
-          Nombre: newUser.NombreCentro,
-          EsPrincipal: true
-        };
-        localStorage.setItem('selectedCenter', JSON.stringify(autoCenter));
-        setSelectedCenterState(autoCenter);
-        router.push('/management/medical/appointments');
-      } else {
-        // Fallback if data is missing (should verify why)
-        console.warn('[AuthContext] Nurse missing center info, falling back to selection.');
-        router.push('/management/medical/select-center');
-      }
+      router.push('/management/medical/select-center');
     }
     else if (newUser.id_Rol === 1) { // Admin
       router.push('/admin');

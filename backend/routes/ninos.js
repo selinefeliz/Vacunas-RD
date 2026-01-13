@@ -8,19 +8,18 @@ const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 // GET /find - Search for children by name/lastname (Medical/Admin only)
 router.get('/find', [verifyToken, checkRole([1, 2, 3])], async (req, res) => {
     try {
-        console.log('[DEBUG] GET /find hit');
-        console.log('[DEBUG] Query params:', req.query);
-        const { q } = req.query;
+        const { q, id_centro } = req.query;
         // Allow empty search to return list
         const searchTerm = q ? `%${q}%` : '%';
+        const centerId = id_centro ? parseInt(id_centro) : null;
+
+        console.log('[DEBUG] GET /find - Query:', { searchTerm, centerId });
 
         const pool = await connectDB();
         const request = pool.request();
         request.input('searchTerm', sql.NVarChar(100), searchTerm);
 
-        // Searching in Nino table and joining with Tutor to allow searching by Parent/Tutor name
-        // Also getting the Tutor User ID for context
-        const query = `
+        let query = `
             SELECT DISTINCT TOP 20 
                 n.id_Nino, 
                 n.Nombres, 
@@ -34,16 +33,30 @@ router.get('/find', [verifyToken, checkRole([1, 2, 3])], async (req, res) => {
             FROM dbo.Nino n
             LEFT JOIN dbo.TutorNino tn ON n.id_Nino = tn.id_Nino
             LEFT JOIN dbo.Tutor t ON tn.id_Tutor = t.id_Tutor
-            WHERE (n.Nombres LIKE @searchTerm OR n.Apellidos LIKE @searchTerm)
-               OR (t.Nombres LIKE @searchTerm OR t.Apellidos LIKE @searchTerm)
-            ORDER BY n.Nombres, n.Apellidos
         `;
+
+        // If filtering by center, we only want patients who have HAD history (CitaVacunacion) in that center
+        if (centerId) {
+            query += ` JOIN dbo.CitaVacunacion cv ON n.id_Nino = cv.id_Nino `;
+        }
+
+        query += `
+            WHERE ((n.Nombres LIKE @searchTerm OR n.Apellidos LIKE @searchTerm)
+               OR (t.Nombres LIKE @searchTerm OR t.Apellidos LIKE @searchTerm))
+        `;
+
+        if (centerId) {
+            request.input('id_centro', sql.Int, centerId);
+            query += ` AND cv.id_CentroVacunacion = @id_centro `;
+        }
+
+        query += ` ORDER BY n.Nombres, n.Apellidos `;
 
         const result = await request.query(query);
         res.json(result.recordset);
 
     } catch (err) {
-        console.error('[NINOS] Error on GET /search:', err);
+        console.error('[NINOS] Error on GET /find:', err);
         res.status(500).send({ message: 'Error al buscar niños.', error: err.message });
     }
 });

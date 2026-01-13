@@ -39,7 +39,7 @@ export default function SelectCenterPage() {
     const roleId = Number(user.id_Rol);
     console.log("[SelectCenter] Role ID (cast):", roleId);
 
-    if (roleId !== 2 && roleId !== 3) { // Medico or Enfermera
+    if (roleId !== 2 && roleId !== 3 && roleId !== 6) { // Medico, Enfermera, Personal
       console.log("[SelectCenter] Access Denied for role:", roleId);
       setIsUnauthorized(true); // Show error instead of redirecting (stops the loop)
       return;
@@ -52,19 +52,7 @@ export default function SelectCenterPage() {
           setCenters(data);
 
           // UX Improvement: If there is only one center, select it automatically to save a click.
-          if (data.length === 1) {
-            const singleCenter = data[0];
-            console.log("[SelectCenter] Auto-selecting single center:", singleCenter.NombreCentro);
 
-            // Short delay to allow state update and user to realize what's happening
-            const centerForContext = {
-              id_CentroVacunacion: singleCenter.id_CentroVacunacion,
-              Nombre: singleCenter.NombreCentro,
-              EsPrincipal: singleCenter.TipoAsignacion === 'Principal'
-            };
-            setSelectedCenter(centerForContext);
-            router.push("/management/medical/appointments");
-          }
         }
       } catch (error) {
         console.error("Failed to fetch medical centers:", error);
@@ -81,7 +69,12 @@ export default function SelectCenterPage() {
       EsPrincipal: center.TipoAsignacion === 'Principal'
     };
     setSelectedCenter(centerForContext);
-    router.push("/management/medical/appointments");
+
+    if (Number(user?.id_Rol) === 6) {
+      router.push("/center-staff/dashboard");
+    } else {
+      router.push("/management/medical/appointments");
+    }
   };
 
   if (authLoading || centersLoading) {
