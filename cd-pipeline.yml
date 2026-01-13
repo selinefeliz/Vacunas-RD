@@ -1,0 +1,158 @@
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: CI
+    # IMPORTANT: this must match the pipeline display name in Azure DevOps
+    # Example: source: 'CI - SNV Build'
+    source: 'Vacunacion Ci'
+    trigger: true
+
+stages:
+- stage: Deploy
+  displayName: 'CD to Staging'
+  variables:
+    - group: SNV-Secrets-Staging
+  jobs:
+  - deployment: DeployToStaging
+    displayName: 'Deploy to Staging'
+    environment: 'Staging'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - script: |
+              echo "Sanitizing resourceGroupName provided by variables"
+              echo "Original: '$(resourceGroupName)'"
+              SAFE_RG=$(echo "$(resourceGroupName)" | sed -E 's/[[:space:]]+/-/g' | sed -E 's/[^-_.()[:alnum:]]/-/g' | sed -E 's/[-]+/-/g' | sed -E 's/^-|-$//g')
+              if [ -z "$SAFE_RG" ]; then
+                SAFE_RG="rg-$(date +%s)"
+              fi
+              echo "Sanitized: '$SAFE_RG'"
+              echo "##vso[task.setvariable variable=SAFE_RESOURCE_GROUP_NAME]$SAFE_RG"
+            displayName: 'Sanitize resourceGroupName'
+          - script: |
+              echo "Validate required variables (checking environment variables)"
+              MISSING=0
+              if [ -z "$SUBSCRIPTIONID" ]; then
+                echo "Warning: SUBSCRIPTIONID (from variable subscriptionId) is empty"
+                MISSING=1
+              fi
+              if [ -z "$LOCATION" ]; then
+                echo "Warning: LOCATION (from variable location) is empty"
+                MISSING=1
+              fi
+              if [ -z "$APPSERVICENAME" ]; then
+                echo "Warning: APPSERVICENAME (from variable appServiceName) is empty"
+                MISSING=1
+              fi
+              if [ $MISSING -eq 1 ]; then
+                echo "One or more required variables are empty. Check variable group SNV-Secrets-Staging."
+              else
+                echo "All required variables appear set."
+              fi
+            displayName: 'Validate variables (non-blocking)'
+
+          - script: |
+              echo "DIAG: resolved pipeline variables (non-secret)"
+              echo "SUBSCRIPTIONID='$(subscriptionId)'"
+              echo "LOCATION='$(location)'"
+              echo "APPSERVICENAME='$(appServiceName)'"
+              echo "SAFE_RESOURCE_GROUP_NAME='$(SAFE_RESOURCE_GROUP_NAME)'"
+            displayName: 'Diag: print resolved variables'
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'SNV-Azure-Staging-Connection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Checking resource group via Azure CLI"
+                echo "SAFE_RESOURCE_GROUP_NAME=$SAFE_RESOURCE_GROUP_NAME"
+                if [ -z "$SUBSCRIPTIONID" ]; then
+                  echo "ERROR: Environment variable SUBSCRIPTIONID is empty. Ensure variable 'subscriptionId' is set and the variable group is authorized."
+                  exit 2
+                fi
+                set -o pipefail
+                az group show --name "$SAFE_RESOURCE_GROUP_NAME" --subscription "$SUBSCRIPTIONID" --output json && echo "Resource group exists: $SAFE_RESOURCE_GROUP_NAME" || {
+                  ec=$?
+                  echo "az group show failed with exit $ec"
+                  if [ $ec -eq 3 ]; then
+                    echo "Resource group not found. Attempting to create resource group '$SAFE_RESOURCE_GROUP_NAME' in location '$LOCATION'"
+                    az group create --name "$SAFE_RESOURCE_GROUP_NAME" --location "$LOCATION" --subscription "$SUBSCRIPTIONID" --output json || {
+                      ec2=$?
+                      echo "az group create failed with exit $ec2"
+                      echo "Listing resource groups in subscription $SUBSCRIPTIONID to help debugging"
+                      az group list --subscription "$SUBSCRIPTIONID" --output table || true
+                      exit $ec2
+                    }
+                    echo "Resource group created: $SAFE_RESOURCE_GROUP_NAME"
+                  else
+                    echo "Listing resource groups in subscription $SUBSCRIPTIONID to help debugging"
+                    az group list --subscription "$SUBSCRIPTIONID" --output table || true
+                    exit $ec
+                  fi
+                }
+            displayName: 'Azure CLI: check resource group'
+            env:
+              SUBSCRIPTIONID: '$(subscriptionId)'
+              LOCATION: '$(location)'
+              APPSERVICENAME: '$(appServiceName)'
+              SAFE_RESOURCE_GROUP_NAME: '$(SAFE_RESOURCE_GROUP_NAME)'
+          - script: |
+              echo "Locating infra/main.bicep under workspace"
+              echo "Working dir: $(System.DefaultWorkingDirectory)"
+              find $(System.DefaultWorkingDirectory) -type f -name 'main.bicep' -print || true
+            displayName: 'Locate main.bicep files'
+
+          - task: AzureCLI@2
+            displayName: 'Validate and deploy infra with az deployment (main.bicep)'
+            inputs:
+              azureSubscription: 'SNV-Azure-Staging-Connection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Searching for main.bicep under $(System.DefaultWorkingDirectory)"
+                TEMPLATE_PATH=$(find "$(System.DefaultWorkingDirectory)" -type f -name 'main.bicep' -print | head -n1 || true)
+                if [ -z "$TEMPLATE_PATH" ]; then
+                  echo "ERROR: main.bicep not found in workspace"
+                  exit 1
+                fi
+                echo "Using template: $TEMPLATE_PATH"
+                echo "Running az deployment group validate to capture detailed errors..."
+                az deployment group validate \
+                  --resource-group "$SAFE_RESOURCE_GROUP_NAME" \
+                  --template-file "$TEMPLATE_PATH" \
+                  --parameters appServiceName="$APPSERVICENAME" \
+                  --subscription "$SUBSCRIPTIONID" \
+                  --output json || {
+                  ec=$?
+                  echo "Validation failed with exit $ec"
+                  echo "Attempting to show the last deployment operations for more context"
+                  az deployment operation group list --resource-group "$SAFE_RESOURCE_GROUP_NAME" --name "$(date +%s)-validation" --subscription "$SUBSCRIPTIONID" --output table || true
+                  exit $ec
+                }
+                echo "Validation succeeded; creating deployment..."
+                az deployment group create \
+                  --resource-group "$SAFE_RESOURCE_GROUP_NAME" \
+                  --template-file "$TEMPLATE_PATH" \
+                  --parameters appServiceName="$APPSERVICENAME" \
+                  --subscription "$SUBSCRIPTIONID" \
+                  --verbose || {
+                  ec=$?
+                  echo "az deployment group create failed with exit $ec"
+                  exit $ec
+                }
+            env:
+              SUBSCRIPTIONID: '$(subscriptionId)'
+              LOCATION: '$(location)'
+              APPSERVICENAME: '$(appServiceName)'
+              SAFE_RESOURCE_GROUP_NAME: '$(SAFE_RESOURCE_GROUP_NAME)'
+
+          - script: |
+              echo "Simulando despliegue de la aplicación a Azure App Service (Staging)"
+              echo "App Service: $(appServiceName)"
+            displayName: 'Simulate App Service deployment'
