@@ -16,6 +16,14 @@ steps:
   displayName: 'Install Node.js'
 
 - script: |
+    # Entramos a la carpeta de backend para instalar y compilar
+    cd backend
     npm install
     npm run build
-  displayName: 'npm install and build'
+    cd ..
+
+    # Entramos a la carpeta de frontend para hacer lo mismo
+    cd frontend
+    npm install
+    npm run build
+  displayName: 'npm install and build (Backend & Frontend)'
