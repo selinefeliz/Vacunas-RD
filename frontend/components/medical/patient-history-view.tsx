@@ -173,7 +173,15 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
       });
 
       if (!response.ok) {
-        throw new Error('Error generating PDF');
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || errorData.error || 'Error del servidor (JSON)');
+        } else {
+          const errorText = await response.text();
+          console.error("Raw server error:", errorText);
+          throw new Error(`Error del servidor (HTTP ${response.status}): ${errorText.substring(0, 50)}...`);
+        }
       }
 
       const blob = await response.blob();
@@ -186,12 +194,12 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error downloading PDF:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Error al generar el PDF. Por favor intente nuevamente.",
+        description: `Error al generar el PDF: ${error.message}`,
       })
     } finally {
       setIsGeneratingPDF(false)
