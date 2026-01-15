@@ -758,7 +758,7 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
     </html>
     `;
 
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
     // Generate PDF
     const pdfBuffer = await page.pdf({
