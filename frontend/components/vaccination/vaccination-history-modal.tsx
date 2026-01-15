@@ -59,55 +59,10 @@ export function VaccinationHistoryModal({ open, onOpenChange, patient }: Vaccina
   const [isGenerating, setIsGenerating] = useState(false)
 
   const generateDigitalCard = async () => {
-    if (!patient || !token) return;
-
-    try {
-      setIsGenerating(true)
-      console.log("Generating digital vaccination card for:", patient.patientName)
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-      const response = await fetch(`${apiUrl}/api/medical/patient-history-pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          id_Nino: patient.patientId || patient.id, // Adaptation for different mock/real data structures
-          id_Usuario: null
-        })
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const errorData = await response.json();
-          throw new Error(errorData.details || errorData.error || 'Error del servidor (JSON)');
-        } else {
-          const errorText = await response.text();
-          console.error("Raw server error:", errorText);
-          throw new Error(`Error del servidor (HTTP ${response.status}): ${errorText.substring(0, 50)}...`);
-        }
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Historial_Vacunacion_${patient.patientName.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-    } catch (error: any) {
-      console.error("Error downloading PDF:", error);
-      alert(`Error al generar el PDF: ${error.message}`);
-    } finally {
-      setIsGenerating(false)
-    }
-  }
+    if (!patient) return;
+    const printUrl = `/print/vaccination-history/${patient.patientId || patient.id}`;
+    window.open(printUrl, '_blank');
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

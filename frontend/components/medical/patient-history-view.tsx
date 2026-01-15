@@ -154,56 +154,9 @@ export function PatientHistoryView({ patientId, childId, showVaccinesOnly = fals
   }
 
   const handleDownloadPDF = async () => {
-    if (!childId || !token) return;
-
-    try {
-      setIsGeneratingPDF(true)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-      const response = await fetch(`${apiUrl}/api/medical/patient-history-pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          id_Nino: childId,
-          id_Usuario: null
-        })
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const errorData = await response.json();
-          throw new Error(errorData.details || errorData.error || 'Error del servidor (JSON)');
-        } else {
-          const errorText = await response.text();
-          console.error("Raw server error:", errorText);
-          throw new Error(`Error del servidor (HTTP ${response.status}): ${errorText.substring(0, 50)}...`);
-        }
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Historial_Vacunacion_${patientHistory?.NombrePaciente.replace(/\s+/g, '_') || 'Paciente'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-    } catch (error: any) {
-      console.error("Error downloading PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Error al generar el PDF: ${error.message}`,
-      })
-    } finally {
-      setIsGeneratingPDF(false)
-    }
+    if (!childId) return;
+    const printUrl = `/print/vaccination-history/${childId}`;
+    window.open(printUrl, '_blank');
   }
 
   if (loading) {
