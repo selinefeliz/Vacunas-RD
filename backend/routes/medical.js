@@ -352,21 +352,27 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
 
   try {
     const { id_Usuario, id_Nino } = req.body
+    console.log(`[PDF GEN] Starting for id_Nino: ${id_Nino}, id_Usuario: ${id_Usuario}`);
 
     if (!id_Usuario && !id_Nino) {
+      console.error("[PDF GEN] Missing IDs in request body");
       return res.status(400).json({ error: "id_Usuario o id_Nino es requerido" })
     }
 
     const pool = await poolPromise
-
     const result = await pool
       .request()
-      .input("id_Usuario", sql.Int, id_Usuario)
+      .input("id_Usuario", sql.Int, id_Usuario || null)
       .input("id_Nino", sql.Int, id_Nino || null)
       .execute("dbo.usp_GetPatientFullHistory")
 
-    const medicalHistory = result.recordsets[0] ? result.recordsets[0][0] : null
+    const medicalHistory = result.recordsets[0] && result.recordsets[0].length > 0 ? result.recordsets[0][0] : null
     const vaccinationHistory = result.recordsets[1] || []
+
+    if (!medicalHistory) {
+      console.warn(`[PDF GEN] No records found for id_Nino: ${id_Nino}`);
+      return res.status(404).json({ error: "No se encontró el historial del paciente en la base de datos" });
+    }
 
     // console.log("🔍 [PDF GEN] Medical History Data:", medicalHistory);
     // console.log("🔍 [PDF GEN] Vaccination History Sample:", vaccinationHistory[0]);
