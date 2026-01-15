@@ -345,14 +345,17 @@ router.post("/change-status", verifyToken, async (req, res) => {
 })
 
 
-// POST /api/medical/patient-history-pdf - Generar PDF del historial de vacunación
+// El backend ya no genera PDFs para evitar problemas con librerías en Vercel.
+// La generación ahora es 100% en el frontend usando la ruta /print/...
 router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], async (req, res) => {
-  // console.log("=== POST /api/medical/patient-history-pdf ===")
-  // console.log("Request body:", req.body)
+  return res.status(410).json({
+    error: "Endpoint obsoleto",
+    details: "Por favor, use la nueva ruta de impresión en el cliente."
+  });
+});
 
-  try {
-    const { id_Usuario, id_Nino } = req.body
-    console.log(`[PDF GEN] Starting for id_Nino: ${id_Nino}, id_Usuario: ${id_Usuario}`);
+/*
+router.post("/patient-history-pdf-old-version", [verifyToken, ...
 
     if (!id_Usuario && !id_Nino) {
       console.error("[PDF GEN] Missing IDs in request body");
@@ -796,7 +799,9 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
       error: "Error al generar el PDF del historial",
       details: error.message,
     })
+    }
   }
-})
+});
+*/
 
-module.exports = router
+module.exports = router;
