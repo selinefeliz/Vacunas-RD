@@ -7,7 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { MapPin, List, Filter, Search, X, Building, Syringe, Stethoscope, Clock, Phone, Mail } from 'lucide-react';
-import InteractiveMap from '@/components/interactive-map';
+import dynamic from 'next/dynamic';
+
+const InteractiveMap = dynamic(() => import('@/components/interactive-map'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-muted flex items-center justify-center">Cargando mapa...</div>
+});
 
 // Define interfaces for data structures
 interface Centro {
