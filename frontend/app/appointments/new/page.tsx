@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import useApi from "@/hooks/use-api"
@@ -29,7 +29,7 @@ interface Child {
   Apellidos: string
 }
 
-export default function NewAppointmentPage() {
+function NewAppointmentForm() {
   const { user, token, loading: authLoading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -358,5 +358,20 @@ export default function NewAppointmentPage() {
         </form>
       </Card>
     </div>
+  )
+}
+
+export default function NewAppointmentPage() {
+  return (
+    <Suspense fallback={
+      <div className="container flex h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Cargando formulario...</p>
+        </div>
+      </div>
+    }>
+      <NewAppointmentForm />
+    </Suspense>
   )
 }
