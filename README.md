@@ -109,9 +109,14 @@ sequenceDiagram
 ---
 
 ## 👥 Equipo de Desarrollo
-*   **Ismael Moquete Eduardo** (1115719)
-*   **Katriel Castillo** (1121299)
-*   **Yobanny Velez** (1117551)
+*   **Giselle Ventura** 
+*   **Seline Feliz** 
+*   **Ismael Moquete Eduardo** 
+*   **Katriel Castillo** 
+*   **Yobanny Velez**
+*   **Emmanuel Cuello**
+*  **Natasha Torres**
+*  **Armani D'Oleo**  
 
 ---
 
