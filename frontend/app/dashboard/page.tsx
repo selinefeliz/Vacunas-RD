@@ -27,6 +27,7 @@ interface Appointment {
   NombreCompletoPersonalAplicado: string | null
   id_PersonalSalud: number | null
   NombrePersonalSalud: string | null
+  id_Nino?: number
 }
 
 export default function DashboardPage() {
@@ -51,7 +52,15 @@ export default function DashboardPage() {
         method: "GET",
       })
       console.log("📅 Appointments data received:", data) // Debug log
-      setAllAppointments(data)
+
+      const appointmentsList = Array.isArray(data) ? data : (data?.recordset || [])
+
+      // Filter out adult appointments (no child associated)
+      // Note: The SP usp_GetAppointmentsByUser does not return id_Nino, but returns RequiereTutor = 1 for children
+      const childAppointments = appointmentsList.filter((app: Appointment) => app.RequiereTutor)
+
+      console.log(`Filtered ${appointmentsList.length - childAppointments.length} adult/self appointments`)
+      setAllAppointments(childAppointments)
     } catch (err) {
       console.error("Failed to fetch appointments:", err)
       setAllAppointments([])
@@ -137,7 +146,7 @@ export default function DashboardPage() {
         combinedDate: combineDateTime(appointment.Fecha, appointment.Hora),
       }))
       .sort((a, b) => a.combinedDate.getTime() - b.combinedDate.getTime())
-      .slice(0, 5)
+      .slice(0, 20)
   }, [allAppointments])
 
   const attendedAppointments = useMemo(() => {

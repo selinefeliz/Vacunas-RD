@@ -18,11 +18,7 @@ async function deploy() {
     try {
         await sql.connect(config);
         console.log('Connected.');
-        const spCode = fs.readFileSync(path.join(__dirname, '..', 'database', 'programmability', 'usp_CalcularEsquemaVacunacionNino.sql'), 'utf8');
-
-        // Since the file has "CREATE OR ALTER", we can run it directly.
-        // We might need to split by GO but tedious/mssql doesn't support GO.
-        // The script I wrote doesn't have GO.
+        const spCode = fs.readFileSync(path.join(__dirname, '..', 'database', 'programmability', 'usp_RecordVaccination.sql'), 'utf8');
         await sql.query(spCode);
         console.log('SP Deployed.');
     } catch (err) {

@@ -39,19 +39,19 @@ export default function ChildrenListPage() {
 
   const getTotalPendingRequests = () => {
     if (!children) return 0;
-    return children.reduce((total, child) => total + child.SolicitudesPendientes, 0);
+    return children.reduce((total, child) => total + (child.SolicitudesPendientes || 0), 0);
   };
 
   return (
     <div className="container mx-auto py-8 px-4">
-      
-        
-          
-          
-        
-        
 
-        
+
+
+
+
+
+
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Mis Niños</h1>
@@ -61,8 +61,8 @@ export default function ChildrenListPage() {
         </div>
         <div className="flex gap-2">
           {getTotalPendingRequests() > 0 && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => handleViewRequests()}
               className="relative"
             >
@@ -123,7 +123,7 @@ export default function ChildrenListPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center gap-2">
                     <div className="bg-green-100 p-2 rounded-full">
@@ -204,12 +204,12 @@ export default function ChildrenListPage() {
         }}
         childId={selectedChildId}
       />
-        
 
-        
-          
-        
-      
+
+
+
+
+
     </div>
   );
 }

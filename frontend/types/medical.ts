@@ -19,4 +19,5 @@ export interface MedicalAppointment {
   id_Nino?: number;
   TieneHistorial?: number;
   FechaNacimiento?: string;
+  IntervaloSiguienteDosis?: number; // Minimum days to wait for the next dose
 }

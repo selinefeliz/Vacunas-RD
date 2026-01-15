@@ -67,6 +67,14 @@ BEGIN
         RETURN;
     END
 
+    -- 3.1 Validate Expiration (Physical)
+    IF (SELECT FechaCaducidad FROM dbo.Lote WHERE id_LoteVacuna = @id_LoteAplicado) < @FechaAplicacion
+    BEGIN
+        SET @OutputMessage = 'Error: El lote de vacuna seleccionado está caducado.';
+        RAISERROR(@OutputMessage, 16, 1);
+        RETURN;
+    END
+
     -- 4. Get Patient Details for Validation
     DECLARE @FechaNacimiento DATE;
     DECLARE @Genero CHAR(1);
@@ -153,16 +161,21 @@ BEGIN
         IF @DosisPropuesta > 1
         BEGIN
             DECLARE @FechaUltimaDosis DATE;
-            -- Get date of last dose of this vaccine
+            -- Get date of last dose of this vaccine that was applied BEFORE or ON the same day as the current one
+            -- This handles cases where history might have future/out-of-order records during catch-up or testing
             SELECT TOP 1 @FechaUltimaDosis = FechaAplicacion
             FROM HistoricoVacunas
-            WHERE id_Nino = @id_Nino AND VacunaNombre = @VacunaNombre
+            WHERE id_Nino = @id_Nino 
+              AND VacunaNombre = @VacunaNombre
+              AND FechaAplicacion <= @FechaAplicacion
             ORDER BY FechaAplicacion DESC;
 
             IF @FechaUltimaDosis IS NOT NULL AND @Rule_IntervaloDias IS NOT NULL
             BEGIN
                 DECLARE @DiasDesdeUltima INT = DATEDIFF(DAY, @FechaUltimaDosis, @FechaAplicacion);
-                IF @DiasDesdeUltima < @Rule_IntervaloDias
+                -- Only enforce if it's actually an earlier dose (Interval > 0) 
+                -- or if we want to prevent same-day duplicates (Interval = 0)
+                IF @DiasDesdeUltima >= 0 AND @DiasDesdeUltima < @Rule_IntervaloDias
                 BEGIN
                      SET @OutputMessage = 'Error de Esquema: No se ha cumplido el intervalo mínimo (' + CAST(@Rule_IntervaloDias AS NVARCHAR) + ' días) desde la última dosis (' + CAST(@DiasDesdeUltima AS NVARCHAR) + ' días transcurridos).';
                     RAISERROR(@OutputMessage, 16, 1);
@@ -245,4 +258,4 @@ BEGIN
         RETURN;
     END CATCH
 END;
-GO
+

@@ -47,8 +47,18 @@ const attendSchema = z.object({
   dosisNumero: z.coerce.number().min(1, "El número de dosis debe ser mayor a 0"),
   requiereProximaDosis: z.boolean().default(false),
   fechaProximaDosis: z.string().optional(),
+  horaProximaDosis: z.string().optional(),
   agendarProximaCita: z.boolean().default(false),
-})
+}).refine((data) => {
+  if (data.agendarProximaCita) {
+    if (!data.fechaProximaDosis) return false;
+    if (!data.horaProximaDosis) return false;
+  }
+  return true;
+}, {
+  message: "Fecha y hora son requeridas para agendar cita",
+  path: ["fechaProximaDosis"], // This will attach error to fecha, but covers both logically
+});
 
 interface AttendAppointmentModalProps {
   appointment: MedicalAppointment
@@ -83,6 +93,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
       dosisNumero: 1,
       requiereProximaDosis: false,
       fechaProximaDosis: "",
+      horaProximaDosis: "",
       agendarProximaCita: false,
     },
   })
@@ -174,6 +185,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
         dosisNumero: values.dosisNumero,
         requiereProximaDosis: values.requiereProximaDosis,
         fechaProximaDosis: values.fechaProximaDosis || null,
+        horaProximaDosis: values.horaProximaDosis || null,
         agendarProximaCita: values.agendarProximaCita,
       }
 
@@ -270,7 +282,7 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="attend" disabled={!patientHasHistory || safeFutureCheck}>
+            <TabsTrigger value="attend" disabled={!patientHasHistory}>
               <Syringe className="h-4 w-4 mr-2" />
               Atender Cita
             </TabsTrigger>
@@ -425,89 +437,44 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                                 className="bg-gray-50 text-black"
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-500">
-                              Dosis calculada automáticamente basada en el historial
-                            </p>
-                            <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
 
+                    {vaccineLots.length === 0 && !loadingLots && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-red-700">
+                        <XCircle className="h-5 w-5" />
+                        <span className="text-sm font-medium">
+                          No hay lotes disponibles o vigentes para esta vacuna en este centro.
+                        </span>
+                      </div>
+                    )}
 
+                    {form.watch("id_LoteVacuna") && vaccineLots.find(l => l.id_LoteVacuna.toString() === form.watch("id_LoteVacuna")) && (
+                      (() => {
+                        const selectedLot = vaccineLots.find(l => l.id_LoteVacuna.toString() === form.watch("id_LoteVacuna"));
+                        const apptDate = new Date(appointment.Fecha);
+                        apptDate.setHours(0, 0, 0, 0);
+                        const isExpired = selectedLot ? new Date(selectedLot.FechaCaducidad) < apptDate : false;
+                        if (isExpired) {
+                          return (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-red-700">
+                              <XCircle className="h-5 w-5" />
+                              <span className="text-sm font-medium">
+                                ¡ATENCIÓN! El lote seleccionado ({selectedLot?.NumeroLote}) ya ha caducado para la fecha de la cita ({formatDateString(appointment.Fecha)}). No suministrar.
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()
+                    )}
                   </CardContent>
                 </Card>
 
                 {/* Next Dose Scheduling */}
-                {!isLastDose && (
-                  <Card className="border-blue-200 bg-blue-50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-blue-800">
-                        <Calendar className="h-5 w-5" />
-                        Programación de Próxima Dosis
-                      </CardTitle>
-                      <CardDescription className="text-blue-700">
-                        Este paciente requiere dosis adicionales para completar el esquema de vacunación
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="requiereProximaDosis"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>Programar próxima dosis</FormLabel>
-                              <p className="text-sm text-gray-600">
-                                Marque esta opción para programar la siguiente dosis
-                              </p>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      {watchRequiereProximaDosis && (
-                        <div className="space-y-4 pl-6 border-l-2 border-blue-200">
-                          <FormField
-                            control={form.control}
-                            name="fechaProximaDosis"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Fecha para la próxima dosis *</FormLabel>
-                                <FormControl>
-                                  <Input type="date" {...field} min={getMinNextDoseDate()} />
-                                </FormControl>
-                                <p className="text-xs text-gray-500">Mínimo 21 días desde hoy</p>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="agendarProximaCita"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel>Agendar cita automáticamente</FormLabel>
-                                  <p className="text-sm text-gray-600">
-                                    El sistema creará una nueva cita para la fecha seleccionada
-                                  </p>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Next Dose Scheduling Removed as per user request */}
 
                 <DialogFooter className="flex flex-col sm:flex-row gap-2">
                   <Button type="button" variant="outline" onClick={onClose}>
@@ -526,8 +493,17 @@ export function AttendAppointmentModal({ appointment, patientId, centerId, isOpe
                     type="button"
                     className="bg-green-600 hover:bg-green-700"
                     onClick={() => setShowConfirmVaccinationDialog(true)}
-                    disabled={attending || !patientHasHistory}>
-
+                    disabled={
+                      attending ||
+                      !patientHasHistory ||
+                      !form.watch("id_LoteVacuna") ||
+                      (() => {
+                        const selectedLot = vaccineLots.find(l => l.id_LoteVacuna.toString() === form.watch("id_LoteVacuna"));
+                        const apptDate = new Date(appointment.Fecha);
+                        apptDate.setHours(0, 0, 0, 0);
+                        return selectedLot ? new Date(selectedLot.FechaCaducidad) < apptDate : true;
+                      })()
+                    }>
                     <Syringe className="mr-2 h-4 w-4" />
                     Confirmar Vacunación
                   </Button>

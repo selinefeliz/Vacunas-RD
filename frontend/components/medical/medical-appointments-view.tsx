@@ -90,7 +90,11 @@ export function MedicalAppointmentsView() {
       console.log(`Fetching appointments from: ${apiUrl}`);
       const data = await fetchAppointments(apiUrl);
       console.log("🔍 Raw appointments data:", data);
-      setAppointments(data || []);
+      const allAppointments = data || []
+      // Filter out appointments that don't have a child ID (adults)
+      const childAppointments = allAppointments.filter(app => app.id_Nino)
+      console.log(`Filtered ${allAppointments.length - childAppointments.length} adult appointments`)
+      setAppointments(childAppointments);
     } catch (error) {
       console.error("Error loading medical appointments:", error);
       toast({
@@ -261,14 +265,18 @@ export function MedicalAppointmentsView() {
 
     const isUpcoming = appointmentDate > now
 
+    // Filter out cancelled appointments as requested
+    const isCancelled = ['Cancelada', 'Cancelada por Paciente', 'Cancelada por Centro', 'No Asistio', 'No Suministrada'].includes(appointment.EstadoCita);
+
     console.log("🔍 Upcoming check:", {
       appointmentId: appointment.id_Cita,
       appointmentDateTime: appointmentDate,
       currentDateTime: now,
       isUpcoming,
+      isCancelled
     })
 
-    return isUpcoming
+    return isUpcoming && !isCancelled
   })
 
   console.log("🔍 Final counts:", {

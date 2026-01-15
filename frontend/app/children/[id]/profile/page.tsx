@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect } from 'react';
+import { formatTimeString } from '@/utils/format-time';
 import { useParams, useRouter } from 'next/navigation';
 import useApi from '@/hooks/use-api';
-import { Loader2, User, ShieldCheck, ShieldAlert, Shield, ArrowRight, ArrowLeft, AlertCircle, Calendar } from 'lucide-react';
+import { Loader2, User, ShieldCheck, ShieldAlert, Shield, ArrowRight, ArrowLeft, AlertCircle, Calendar, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, differenceInMonths, differenceInYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +28,7 @@ interface VaccinationScheduleEntry {
     NombreVacuna: string;
     DosisPorAplicar: number;
     FechaSugerida: string;
-    Estado: 'Vencida' | 'Proxima' | 'Pendiente';
+    Estado: 'Vencida' | 'Proxima' | 'Pendiente' | 'Edad Excedida' | 'Futura';
     Criterio: string;
 }
 
@@ -38,10 +39,20 @@ const getStatusBadgeVariant = (status: VaccinationScheduleEntry['Estado']) => {
             return 'destructive';
         case 'Proxima':
             return 'secondary';
+        case 'Futura':
+            return 'outline'; // or a custom calm blue if available, outline is fine for now
         default:
             return 'outline';
     }
 };
+
+interface Appointment {
+    id_Cita: number;
+    id_Vacuna: number;
+    Fecha: string;
+    Hora: string;
+    EstadoCita: string;
+}
 
 // Helper to get icon based on status
 const getStatusIcon = (status: VaccinationScheduleEntry['Estado']) => {
@@ -49,10 +60,25 @@ const getStatusIcon = (status: VaccinationScheduleEntry['Estado']) => {
         case 'Vencida':
             return <ShieldAlert className="h-5 w-5 text-red-500" />;
         case 'Proxima':
-            return <ShieldCheck className="h-5 w-5 text-yellow-500" />;
+            return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+        case 'Futura':
+            return <Calendar className="h-5 w-5 text-gray-400" />;
         default:
-            return <Shield className="h-5 w-5 text-gray-500" />;
+            return <Shield className="h-5 w-5 text-gray-400" />;
     }
+};
+
+// Helper to format age
+const formatAge = (birthDate: string) => {
+    const dob = new Date(birthDate);
+    const today = new Date();
+    const months = differenceInMonths(today, dob);
+    const years = differenceInYears(today, dob);
+
+    if (years === 0) {
+        return `${months} Meses`;
+    }
+    return `${years} Años`;
 };
 
 export default function ChildProfilePage() {
@@ -62,13 +88,15 @@ export default function ChildProfilePage() {
 
     const { data: childProfile, loading: loadingProfile, error: errorProfile, request: fetchProfile } = useApi<ChildProfile>();
     const { data: schedule, loading: loadingSchedule, error: errorSchedule, request: fetchSchedule } = useApi<VaccinationScheduleEntry[]>();
+    const { data: appointments, request: fetchAppointments } = useApi<Appointment[]>();
 
     useEffect(() => {
         if (childId) {
             fetchProfile(`/api/ninos/${childId}`);
             fetchSchedule(`/api/ninos/${childId}/vaccination-schedule`);
+            fetchAppointments(`/api/ninos/${childId}/appointments`);
         }
-    }, [childId, fetchProfile, fetchSchedule]);
+    }, [childId, fetchProfile, fetchSchedule, fetchAppointments]);
 
     if (loadingProfile || loadingSchedule) {
         return (
@@ -130,7 +158,7 @@ export default function ChildProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                         <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Edad Actual</p>
-                            <p className="text-xl font-bold">{(childProfile as any).EdadActual} Años</p>
+                            <p className="text-xl font-bold">{childProfile ? formatAge(childProfile.FechaNacimiento) : '--'}</p>
                         </div>
                         <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Identificación</p>
@@ -183,56 +211,145 @@ export default function ChildProfilePage() {
                                 <div className="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-100 dark:bg-gray-800 hidden md:block" />
 
                                 <div className="space-y-4">
-                                    {schedule.map((item, idx) => (
-                                        <div
-                                            key={`${item.id_Vacuna}-${item.DosisPorAplicar}`}
-                                            className={cn(
-                                                "relative flex flex-col md:flex-row items-center md:items-start md:justify-between p-5 border rounded-2xl transition-all duration-200",
-                                                item.Estado === 'Vencida' ? "bg-red-50/30 border-red-100 hover:border-red-200" : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:shadow-md"
-                                            )}
-                                        >
-                                            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 flex-1">
-                                                <div className={cn(
-                                                    "z-10 p-3 rounded-full md:mt-1",
-                                                    item.Estado === 'Vencida' ? "bg-red-100 text-red-600" :
-                                                        item.Estado === 'Proxima' ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-400"
-                                                )}>
-                                                    {getStatusIcon(item.Estado)}
-                                                </div>
-                                                <div className="text-center md:text-left">
-                                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                                                        {item.NombreVacuna}
-                                                        <span className="ml-2 text-sm font-normal text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
-                                                            Dosis {item.DosisPorAplicar}
-                                                        </span>
-                                                    </h3>
-                                                    <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 mt-2">
-                                                        <p className="text-sm font-medium flex items-center gap-1">
-                                                            <Calendar className="h-3 w-3" />
-                                                            Sugerido: <span className="text-gray-900 dark:text-gray-100">{format(new Date(item.FechaSugerida), 'dd/MM/yyyy')}</span>
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                            <Shield className="h-3 w-3" />
-                                                            {item.Criterio}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    {/* Compute Blocked Status Logic */
+                                        (() => {
+                                            // 1. Identify Minimum Unfinished Age Group
+                                            // We consider a group "Unfinished" if it has any item with Status: Vencida, Pendiente, or Proxima.
+                                            // We exclude 'Futura' (too far) and 'Completada' (done).
+                                            // actually 'Completada' is filtered out of 'schedule' usually, so we just look at what's here.
+                                            // Wait, if I have a 2-month vaccine that is 'Futura' (e.g. I am 1 month old), 
+                                            // does it block 4-month vaccines? 
+                                            // Yes, 2-month must be done before 4-month.
+                                            // But 'Futura' means I can't do it yet?
+                                            // If I am 1 month old, 2-month is Futura, 4-month is Futura.
+                                            // Both are Futura. Neither is "Pendiente".
+                                            // So minUnfinishedAge might be empty?
+                                            // If everything is Futura, we shouldn't block purely based on "Pendiente".
+                                            // We should block based on Age Order.
 
-                                            <div className="mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3 min-w-[140px]">
-                                                <Badge variant={getStatusBadgeVariant(item.Estado)} className="w-full justify-center py-1">
-                                                    {item.Estado}
-                                                </Badge>
-                                                {(item.Estado === 'Vencida' || item.Estado === 'Proxima') && idx === 0 && (
-                                                    <Button asChild size="sm" className="w-full">
-                                                        <Link href={`/appointments/new?childId=${childId}&vaccineId=${item.id_Vacuna}`}>
-                                                            Agendar <ArrowRight className="ml-2 h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                                            // Simplified Rule: "Complete el grupo anterior".
+                                            // Block items where EdadMinimaMeses > (Lowest Age of any non-completed item).
+                                            // Even if that lowest item is Futura?
+                                            // If I am 1 mo. 2mo(Futura), 4mo(Futura).
+                                            // Can I schedule 4mo? No, must do 2mo first.
+                                            // So yes, Lowest Age of ANY item in the schedule defines current focus.
+
+                                            // Filter out 'Edad Excedida' (they shouldn't block valid ones? or should they?)
+                                            // If I missed my 2mo vaccine and I am 5 years old (Exceeded), should I be blocked from 4mo?
+                                            // Probably not if it's abandoned. But let's assume 'Edad Excedida' items are effectively "done/skipped".
+                                            // We should filtered them out of the blocker logic ideally.
+                                            // For now, let's include all non-skipped items.
+
+                                            const activeItems = schedule.filter(s => s.Estado !== 'Edad Excedida');
+                                            const minOpenAge = activeItems.length > 0
+                                                ? Math.min(...activeItems.map(s => (s as any).EdadMinimaMeses || 0))
+                                                : 999;
+
+                                            return schedule.filter(s => s.Estado !== 'Edad Excedida').map((item, idx) => {
+                                                // Determine if Blocked
+                                                const itemAge = (item as any).EdadMinimaMeses || 0;
+                                                const isBlocked = itemAge > minOpenAge;
+
+                                                // Smart Matching Logic (Per Item)
+                                                // We need to know which appointment index corresponds to THIS dose.
+                                                // Strategy: Get all for this vaccine name, sort them. Get all doses for this vaccine name, sort them. Match index.
+                                                const getMatchedAppointment = () => {
+                                                    const activeAppointments = appointments?.filter(a =>
+                                                        (a as any).NombreVacuna === item.NombreVacuna &&
+                                                        ['Agendada', 'Confirmada'].includes(a.EstadoCita)
+                                                    ).sort((a, b) => new Date(a.Fecha).getTime() - new Date(b.Fecha).getTime()) || [];
+
+                                                    const dosesOfThisVaccine = schedule
+                                                        .filter(s => s.NombreVacuna === item.NombreVacuna && s.Estado !== 'Edad Excedida') // Consider all visible doses
+                                                        .sort((a, b) => a.DosisPorAplicar - b.DosisPorAplicar);
+
+                                                    const myIndex = dosesOfThisVaccine.findIndex(d => d.DosisPorAplicar === item.DosisPorAplicar);
+
+                                                    if (myIndex !== -1 && activeAppointments[myIndex]) {
+                                                        const matchedAppt = activeAppointments[myIndex];
+                                                        if (new Date(matchedAppt.Fecha).getFullYear() > 2000) return matchedAppt;
+                                                    }
+                                                    return null;
+                                                };
+
+                                                const matchedAppt = getMatchedAppointment();
+
+                                                return (
+                                                    <div
+                                                        key={`${item.id_Vacuna}-${item.DosisPorAplicar}`}
+                                                        className={cn(
+                                                            "relative flex flex-col md:flex-row items-center md:items-start md:justify-between p-5 border rounded-2xl transition-all duration-200",
+                                                            item.Estado === 'Vencida' ? "bg-red-50/30 border-red-100 hover:border-red-200" : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:shadow-md",
+                                                            isBlocked && "opacity-75 grayscale-[0.5]"
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 flex-1">
+                                                            <div className={cn(
+                                                                "z-10 p-3 rounded-full md:mt-1",
+                                                                item.Estado === 'Vencida' ? "bg-red-100 text-red-600" :
+                                                                    item.Estado === 'Proxima' ? "bg-amber-100 text-amber-600" :
+                                                                        item.Estado === 'Futura' ? "bg-gray-50 text-gray-400" : "bg-blue-50 text-blue-500"
+                                                            )}>
+                                                                {getStatusIcon(item.Estado)}
+                                                            </div>
+                                                            <div className="text-center md:text-left">
+                                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                                                    {item.NombreVacuna}
+                                                                    <span className="ml-2 text-sm font-normal text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                                                        Dosis {item.DosisPorAplicar}
+                                                                    </span>
+                                                                </h3>
+                                                                <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 mt-2">
+                                                                    <p className="text-sm font-medium flex items-center gap-1">
+                                                                        <Calendar className="h-3 w-3" />
+                                                                        Sugerido: <span className="text-gray-900 dark:text-gray-100">{format(new Date(item.FechaSugerida), 'dd/MM/yyyy')}</span>
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                        <Shield className="h-3 w-3" />
+                                                                        {item.Criterio} ({itemAge} meses)
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3 min-w-[140px]">
+                                                            {matchedAppt ? (
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                        <Clock className="w-3 h-3 mr-1" />
+                                                                        Cita Agendada
+                                                                    </Badge>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        {format(new Date(matchedAppt.Fecha), 'dd/MM/yyyy', { locale: es })}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        {formatTimeString(matchedAppt.Hora)}
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <Badge variant={getStatusBadgeVariant(item.Estado)} className="w-full justify-center py-1">
+                                                                        {item.Estado}
+                                                                    </Badge>
+                                                                    {isBlocked ? (
+                                                                        <span className="text-xs text-center text-muted-foreground block w-full mt-2">
+                                                                            Complete el grupo de {minOpenAge} meses
+                                                                        </span>
+                                                                    ) : (
+                                                                        <Button asChild size="sm" className="w-full mt-2">
+                                                                            <Link href={`/appointments/new?childId=${childId}&vaccineId=${item.id_Vacuna}`}>
+                                                                                Agendar <ArrowRight className="ml-2 h-4 w-4" />
+                                                                            </Link>
+                                                                        </Button>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    {/* End Logic */}
                                 </div>
                             </div>
                         </div>
@@ -249,7 +366,6 @@ export default function ChildProfilePage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 }
-

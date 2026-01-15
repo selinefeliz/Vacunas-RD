@@ -233,6 +233,54 @@ router.post("/attend-appointment", verifyToken, async (req, res) => {
     const outputMessage = result.output?.OutputMessage || "Cita médica atendida exitosamente"
     console.log("Medical appointment attended successfully:", outputMessage)
 
+    // --- NEXT DOSE SCHEDULING LOGIC ---
+    if (req.body.agendarProximaCita && req.body.fechaProximaDosis && req.body.horaProximaDosis) {
+      try {
+        console.log("Attempting to schedule next dose appointment...");
+        const { fechaProximaDosis, horaProximaDosis } = req.body;
+
+        // 1. Get details from the CURRENT appointment to replicate (Child, Vaccine, Center)
+        const currentApptResult = await pool.request()
+          .input("id_Cita", sql.Int, id_Cita)
+          .query(`
+            SELECT id_Nino, id_Vacuna, id_CentroVacunacion 
+            FROM CitaVacunacion 
+            WHERE id_Cita = @id_Cita
+          `);
+
+        if (currentApptResult.recordset.length > 0) {
+          const { id_Nino, id_Vacuna, id_CentroVacunacion } = currentApptResult.recordset[0];
+
+          // Format Time HH:MM
+          let formattedHora = horaProximaDosis;
+          if (horaProximaDosis.length === 5) { // HH:MM
+            formattedHora = horaProximaDosis + ':00';
+          }
+
+          // 2. Schedule the new appointment
+          const scheduleResult = await pool.request()
+            .input('id_Nino', sql.Int, id_Nino)
+            .input('id_Vacuna', sql.Int, id_Vacuna)
+            .input('id_CentroVacunacion', sql.Int, id_CentroVacunacion)
+            .input('Fecha', sql.Date, fechaProximaDosis)
+            .input('Hora', sql.VarChar(8), formattedHora)
+            .input('id_UsuarioRegistraCita', sql.Int, medicalUserId)
+            .input('RequiereTutor', sql.Bit, 1) // Assuming child always requires tutor for now
+            .output('OutputMessage', sql.NVarChar(255))
+            .output('New_id_Cita', sql.Int)
+            .execute('usp_ScheduleAppointment');
+
+          console.log("Next dose scheduled successfully. New ID:", scheduleResult.output.New_id_Cita);
+        } else {
+          console.warn("Could not find current appointment details to schedule next dose.");
+        }
+      } catch (scheduleError) {
+        console.error("Error scheduling next dose:", scheduleError);
+        // We do NOT fail the main request, just log the error, maybe append to message?
+      }
+    }
+    // ----------------------------------
+
     res.json({
       success: true,
       message: outputMessage,

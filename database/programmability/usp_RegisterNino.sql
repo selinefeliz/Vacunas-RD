@@ -1,14 +1,4 @@
-PRINT 'Creating Stored Procedure usp_RegisterNino...';
-GO
-
-IF OBJECT_ID('dbo.usp_RegisterNino', 'P') IS NOT NULL
-BEGIN
-    DROP PROCEDURE dbo.usp_RegisterNino;
-END
-SET QUOTED_IDENTIFIER ON;
-GO
-
-CREATE PROCEDURE dbo.usp_RegisterNino
+CREATE OR ALTER PROCEDURE dbo.usp_RegisterNino
     -- Child details
     @Nombres_Nino NVARCHAR(100),
     @Apellidos_Nino NVARCHAR(100),
@@ -121,12 +111,14 @@ BEGIN
         -- Insert into Nino table
         INSERT INTO dbo.Nino (
             id_Usuario, Nombres, Apellidos, FechaNacimiento, Genero, 
-            Email, DireccionResidencia, CodigoIdentificacionPropio, PaisNacimiento, id_CentroSaludAsignado, id_Usuario_Tutor
+            Email, DireccionResidencia, CodigoIdentificacionPropio, PaisNacimiento, 
+            id_CentroSaludAsignado, id_Usuario_Tutor, FechaRegistro
         )
         VALUES (
-            @New_id_Usuario_Nino, -- This will be NULL if no user account was created for the child
+            @New_id_Usuario_Nino, 
             @Nombres_Nino, @Apellidos_Nino, @FechaNacimiento_Nino, @Genero_Nino, 
-            @Email_Nino, @DireccionResidencia_Nino, @CodigoIdentificacionPropio_Nino, @PaisNacimiento_Nino, @id_CentroSaludAsignado_Nino, @id_Usuario_Tutor_Real
+            @Email_Nino, @DireccionResidencia_Nino, @CodigoIdentificacionPropio_Nino, @PaisNacimiento_Nino, 
+            @id_CentroSaludAsignado_Nino, @id_Usuario_Tutor_Real, GETDATE()
         );
 
         SET @New_id_Nino = SCOPE_IDENTITY();
@@ -154,7 +146,4 @@ BEGIN
         RETURN;
     END CATCH
 END;
-GO
 
-PRINT 'Stored Procedure usp_RegisterNino created/updated successfully.';
-GO

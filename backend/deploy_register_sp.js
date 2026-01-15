@@ -18,11 +18,11 @@ async function deploy() {
     try {
         await sql.connect(config);
         console.log('Connected.');
-        const spCode = fs.readFileSync(path.join(__dirname, '..', 'database', 'programmability', 'usp_CalcularEsquemaVacunacionNino.sql'), 'utf8');
+        let spCode = fs.readFileSync(path.join(__dirname, '..', 'database', 'programmability', 'usp_RegisterNino.sql'), 'utf8');
 
-        // Since the file has "CREATE OR ALTER", we can run it directly.
-        // We might need to split by GO but tedious/mssql doesn't support GO.
-        // The script I wrote doesn't have GO.
+        // Remove PRINT statements that might cause issues in some environments or just clean up
+        // But the main issue is GO which we already removed via PowerShell.
+
         await sql.query(spCode);
         console.log('SP Deployed.');
     } catch (err) {

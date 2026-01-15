@@ -23,8 +23,9 @@ BEGIN
 
     SELECT 
         c.id_Cita,
-        c.Fecha AS FechaCita,
-        c.Hora AS HoraCita,
+        c.id_Vacuna, -- Added missing ID for frontend matching
+        c.Fecha, -- Removed alias to match 'Fecha' in interface
+        c.Hora, -- Removed alias to match 'Hora' in interface
         v.Nombre AS NombreVacuna,
         cvc.NombreCentro AS NombreCentroVacunacion,
         ec.Estado AS EstadoCita,

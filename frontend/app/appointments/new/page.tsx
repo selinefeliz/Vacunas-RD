@@ -47,7 +47,7 @@ export default function NewAppointmentPage() {
   })
   const [schedule, setSchedule] = useState<any[]>([])
   const [loadingSchedule, setLoadingSchedule] = useState(false)
-  const [appointmentFor, setAppointmentFor] = useState<"self" | "child">("self")
+  const [appointmentFor, setAppointmentFor] = useState<"self" | "child">("child")
 
   const { request: callApi, loading: dataLoading } = useApi()
   const { request: createAppointment, loading: formLoading } = useApi()
@@ -183,26 +183,18 @@ export default function NewAppointmentPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {/* Selector de tipo de cita removido - Solo para niños */}
+
             {user?.id_Rol === 5 && (
               <div className="space-y-2">
-                <Label>¿Para quién es la cita?</Label>
-                <Select onValueChange={(value) => setAppointmentFor(value as "self" | "child")} value={appointmentFor}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="self">Para mí</SelectItem>
-                    <SelectItem value="child">Para un niño</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {appointmentFor === "child" && user?.id_Rol === 5 && (
-              <div className="space-y-2">
                 <Label htmlFor="id_Nino">Niño</Label>
-                <Select onValueChange={(value) => handleChange("id_Nino", value)} value={formData.id_Nino} required={appointmentFor === "child"}>
-                  <SelectTrigger>
+                <Select
+                  onValueChange={(value) => handleChange("id_Nino", value)}
+                  value={formData.id_Nino}
+                  required={appointmentFor === "child"}
+                  disabled={!!searchParams.get('childId')}
+                >
+                  <SelectTrigger className={!!searchParams.get('childId') ? "bg-gray-50 opacity-100 cursor-not-allowed" : ""}>
                     <SelectValue placeholder="Seleccione un niño" />
                   </SelectTrigger>
                   <SelectContent>
@@ -244,7 +236,7 @@ export default function NewAppointmentPage() {
                 onValueChange={(value) => handleChange("id_Vacuna", value)}
                 value={formData.id_Vacuna}
                 required
-                disabled={appointmentFor === "child" && (!formData.id_Nino || loadingSchedule)}
+                disabled={appointmentFor === "child" && (!formData.id_Nino || loadingSchedule || !!searchParams.get('vaccineId'))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={
@@ -258,25 +250,18 @@ export default function NewAppointmentPage() {
                 <SelectContent>
                   {appointmentFor === "child" && schedule.length > 0 ? (
                     schedule
-                      .filter(s => s.Estado === 'Vencida' || s.Estado === 'Proxima')
+                      .filter((s) => s.id_Vacuna) // Ensure valid items
+                      .filter((s) => s.Estado !== 'Edad Excedida') // Filter out age exceeded
+                      .filter((s) => !searchParams.get('vaccineId') || s.id_Vacuna.toString() === searchParams.get('vaccineId')) // Filter if pre-selected
                       .reduce((acc: any[], current) => {
-                        // Deduplicate
                         if (!acc.find(item => item.id_Vacuna === current.id_Vacuna)) {
                           acc.push(current);
                         }
                         return acc;
                       }, [])
-                      .filter((s, _, self) => {
-                        // Priority Logic: Get earliest date 
-                        const dates = self.map(i => new Date(i.FechaSugerida).getTime());
-                        const minDate = Math.min(...dates);
-                        const currentDate = new Date(s.FechaSugerida).getTime();
-                        // Allow if date matches minDate (within a small margin for same-day batch)
-                        return currentDate <= minDate;
-                      })
                       .map((s) => (
                         <SelectItem key={s.id_Vacuna} value={s.id_Vacuna.toString()}>
-                          {s.NombreVacuna} {s.Estado === 'Vencida' ? '(Atrasada ⚠️)' : '(Próxima)'}
+                          {s.NombreVacuna} - Dosis {s.DosisPorAplicar}
                         </SelectItem>
                       ))
                   ) : appointmentFor === "self" ? (
@@ -320,7 +305,24 @@ export default function NewAppointmentPage() {
                     className="pl-10"
                     value={formData.FechaCita}
                     onChange={(e) => handleChange("FechaCita", e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={(() => {
+                      const selectedVaccine = schedule.find(s => s.id_Vacuna.toString() === formData.id_Vacuna);
+                      console.log('[DEBUG] Selected Vaccine:', selectedVaccine);
+                      console.log('[DEBUG] Full Schedule:', schedule);
+
+                      if (selectedVaccine && selectedVaccine.FechaSugerida) {
+                        try {
+                          const suggested = new Date(selectedVaccine.FechaSugerida).toISOString().split("T")[0];
+                          const today = new Date().toISOString().split("T")[0];
+                          console.log('[DEBUG] Dates:', { suggested, today });
+                          return suggested > today ? suggested : today;
+                        } catch (e) {
+                          console.log('[DEBUG] Error parsing date:', e);
+                          return new Date().toISOString().split("T")[0];
+                        }
+                      }
+                      return new Date().toISOString().split("T")[0];
+                    })()}
                     required
                   />
                 </div>
