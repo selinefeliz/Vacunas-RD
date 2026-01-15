@@ -412,9 +412,20 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
     const path = require('path');
     let logoBase64 = '';
     try {
-      logoBase64 = fs.readFileSync(path.join(__dirname, '../public/logo_base64.txt'), 'utf8').trim();
+      // Direct relative path or absolute path using process.cwd()
+      const logoPath = path.join(process.cwd(), 'public/logo_base64.txt');
+      console.log(`[PDF GEN] Attempting to load logo from: ${logoPath}`);
+      if (fs.existsSync(logoPath)) {
+        logoBase64 = fs.readFileSync(logoPath, 'utf8').trim();
+      } else {
+        const altPath = path.join(__dirname, '../public/logo_base64.txt');
+        console.log(`[PDF GEN] Logo not found at main path, trying alt: ${altPath}`);
+        if (fs.existsSync(altPath)) {
+          logoBase64 = fs.readFileSync(altPath, 'utf8').trim();
+        }
+      }
     } catch (e) {
-      console.error('Could not load logo for PDF watermark');
+      console.error('[PDF GEN] Could not load logo for PDF watermark:', e.message);
     }
 
     // HTML Template

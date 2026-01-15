@@ -80,7 +80,8 @@ export function VaccinationHistoryModal({ open, onOpenChange, patient }: Vaccina
       });
 
       if (!response.ok) {
-        throw new Error('Error generating PDF');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Error generating PDF');
       }
 
       const blob = await response.blob();
@@ -93,9 +94,9 @@ export function VaccinationHistoryModal({ open, onOpenChange, patient }: Vaccina
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error downloading PDF:", error);
-      alert("Error al generar el PDF. Por favor intente nuevamente.");
+      alert(`Error al generar el PDF: ${error.message}`);
     } finally {
       setIsGenerating(false)
     }
