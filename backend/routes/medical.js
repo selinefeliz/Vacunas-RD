@@ -378,13 +378,35 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
     // Extra info fetch removed as per user request to simplify and remove ID/Age fields
 
 
-    // Launch Puppeteer
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    // Launch Puppeteer (Conditional for Vercel)
+    let browser;
+    if (process.env.VERCEL) {
+      const chromium = require('@sparticuz/chromium');
+      const puppeteerCore = require('puppeteer-core');
+      browser = await puppeteerCore.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    } else {
+      const puppeteer = require('puppeteer');
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+    }
     const page = await browser.newPage();
+
+    // Load logo for watermark
+    const fs = require('fs');
+    const path = require('path');
+    let logoBase64 = '';
+    try {
+      logoBase64 = fs.readFileSync(path.join(__dirname, '../public/logo_base64.txt'), 'utf8').trim();
+    } catch (e) {
+      console.error('Could not load logo for PDF watermark');
+    }
 
     // HTML Template
     const htmlContent = `
@@ -393,7 +415,7 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
     <head>
         <meta charset="UTF-8">
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Dancing+Script:wght@600&display=swap');
             
             body {
                 font-family: 'Inter', sans-serif;
@@ -401,44 +423,63 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
                 padding: 40px;
                 color: #1e293b;
                 line-height: 1.5;
+                position: relative;
+            }
+
+            .watermark {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-30deg);
+                opacity: 0.07;
+                z-index: -1;
+                width: 70%;
+                pointer-events: none;
             }
             
             .header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 2px solid #0f172a;
+                border-bottom: 3px solid #3b82f6;
                 padding-bottom: 20px;
                 margin-bottom: 30px;
             }
             
             .title-section h1 {
-                font-size: 24px;
-                color: #0f172a;
+                font-size: 28px;
+                color: #1e40af;
                 margin: 0;
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }
             
             .title-section p {
-                font-size: 12px;
-                color: #64748b;
+                font-size: 14px;
+                color: #475569;
                 margin: 5px 0 0 0;
+                font-weight: 600;
             }
             
             .logo-section {
                 text-align: right;
             }
+
+            .logo-img {
+                width: 100px;
+                margin-bottom: 5px;
+            }
             
             .patient-card {
                 background-color: #f8fafc;
                 border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 20px;
+                border-radius: 12px;
+                padding: 25px;
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 20px;
                 margin-bottom: 30px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
             
             .info-group label {
@@ -446,135 +487,252 @@ router.post("/patient-history-pdf", [verifyToken, checkRole([1, 2, 3, 5, 6])], a
                 font-size: 11px;
                 color: #64748b;
                 text-transform: uppercase;
-                font-weight: 600;
+                font-weight: 700;
                 margin-bottom: 4px;
             }
             
             .info-group div {
                 font-size: 16px;
                 font-weight: 600;
-                color: #334155;
+                color: #0f172a;
             }
             
             .section-title {
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: 700;
-                color: #0f172a;
-                margin-bottom: 15px;
-                border-left: 4px solid #3b82f6;
-                padding-left: 10px;
+                color: #1e40af;
+                margin-bottom: 20px;
+                border-left: 5px solid #3b82f6;
+                padding-left: 15px;
             }
             
             table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 30px;
+                margin-bottom: 40px;
                 font-size: 13px;
+                background-color: rgba(255, 255, 255, 0.7);
             }
             
             thead th {
-                background-color: #f1f5f9;
+                background-color: #3b82f6;
                 text-align: left;
-                padding: 12px;
-                color: #475569;
+                padding: 14px;
+                color: white;
                 font-weight: 600;
-                border-bottom: 2px solid #e2e8f0;
+                border: none;
             }
             
             tbody td {
-                padding: 12px;
+                padding: 14px;
                 border-bottom: 1px solid #e2e8f0;
                 color: #334155;
             }
             
             tbody tr:nth-child(even) {
-                background-color: #fafbfc;
+                background-color: rgba(248, 250, 252, 0.8);
             }
             
             .chip {
                 display: inline-block;
-                padding: 2px 8px;
+                padding: 4px 10px;
                 border-radius: 9999px;
                 font-size: 11px;
-                font-weight: 600;
+                font-weight: 700;
                 background-color: #dbeafe;
                 color: #1e40af;
+                border: 1px solid #bfdbfe;
+            }
+
+            .signatures-container {
+                display: flex;
+                justify-content: space-around;
+                margin-top: 60px;
+                margin-bottom: 40px;
+            }
+
+            .signature-box {
+                text-align: center;
+                width: 200px;
+                position: relative;
+            }
+
+            .signature-line {
+                border-top: 1px solid #1e293b;
+                margin-top: 50px;
+                padding-top: 10px;
+            }
+
+            .signature-text {
+                font-family: 'Dancing Script', cursive;
+                font-size: 22px;
+                color: #1e3a8a;
+                position: absolute;
+                top: 15px;
+                left: 0;
+                right: 0;
+            }
+
+            .stamp {
+                position: absolute;
+                width: 90px;
+                height: 90px;
+                border: 3px double #1e3a8a;
+                border-radius: 50%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 5px;
+                color: #1e3a8a;
+                font-weight: bold;
+                font-size: 8px;
+                opacity: 0.6;
+                transform: rotate(-15deg);
+                top: -40px;
+                right: -40px;
+                background: transparent;
+                pointer-events: none;
+            }
+
+            .stamp-inner {
+                border: 1px solid #1e3a8a;
+                border-radius: 50%;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
             }
 
             .footer {
-                margin-top: 50px;
+                margin-top: 30px;
                 text-align: center;
-                font-size: 10px;
-                color: #94a3b8;
+                font-size: 11px;
+                color: #64748b;
                 border-top: 1px solid #e2e8f0;
-                padding-top: 20px;
+                padding-top: 25px;
+            }
+
+            .security-code {
+                margin-top: 10px;
+                font-family: monospace;
+                font-size: 9px;
+                color: #94a3b8;
             }
         </style>
     </head>
     <body>
+        ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" class="watermark" />` : ''}
+
         <div class="header">
             <div class="title-section">
                 <h1>Historial de Vacunación</h1>
-                <p>Reporte Oficial del Sistema Nacional de Vacunación</p>
+                <p>Sistema Nacional de Inmunización de la República Dominicana</p>
             </div>
             <div class="logo-section">
-                <!-- Placeholder for Logo or additional info -->
-                <div style="font-weight: bold; font-size: 20px; color: #3b82f6;">VAC-RD</div>
-                <div style="font-size: 10px; color: #64748b;">${new Date().toLocaleDateString()}</div>
+                ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" class="logo-img" />` : ''}
+                <div style="font-size: 12px; color: #1e40af; font-weight: bold;">VACUNAS RD</div>
+                <div style="font-size: 11px; color: #64748b;">Fecha de Emisión: ${new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
             </div>
         </div>
 
         <div class="patient-card">
             <div class="info-group">
-                <label>Paciente</label>
+                <label>Nombre del Paciente</label>
                 <div>${medicalHistory.NombrePaciente}</div>
             </div>
             <div class="info-group">
                 <label>Fecha de Nacimiento</label>
-                <div>${new Date(medicalHistory.FechaNacimiento).toLocaleDateString()}</div>
+                <div>${new Date(medicalHistory.FechaNacimiento).toLocaleDateString('es-DO')}</div>
             </div>
-
         </div>
 
-        <h2 class="section-title">Registro de Dosis Aplicadas</h2>
+        <h2 class="section-title">Registro Oficial de Inmunización</h2>
 
         ${vaccinationHistory.length > 0 ? `
         <table>
             <thead>
                 <tr>
-                    <th>Vacuna</th>
+                    <th>Vacuna / Antígeno</th>
                     <th>Dosis</th>
                     <th>Fecha Aplicación</th>
-                    <th>Lote</th>
-                    <th>Centro / Personal</th>
+                    <th>No. Lote</th>
+                    <th>Centro y Personal Autorizado</th>
                 </tr>
             </thead>
             <tbody>
                 ${vaccinationHistory.map(vac => `
                 <tr>
                     <td>
-                        <div style="font-weight: bold;">${vac.Vacuna}</div>
+                        <div style="font-weight: bold; color: #1e293b;">${vac.Vacuna}</div>
                     </td>
-                    <td><span class="chip">${vac.NumeroDosis} ${vac.DosisLimite ? `de ${vac.DosisLimite}` : ''}</span></td>
-                    <td>${new Date(vac.FechaAplicacion).toLocaleDateString()}</td>
-                    <td>${vac.NumeroLote || 'N/A'}</td>
+                    <td><span class="chip">Dosis ${vac.NumeroDosis} ${vac.DosisLimite ? `de ${vac.DosisLimite}` : ''}</span></td>
+                    <td>${new Date(vac.FechaAplicacion).toLocaleDateString('es-DO')}</td>
+                    <td><span style="font-family: monospace;">${vac.NumeroLote || '---'}</span></td>
                     <td>
-                        <div>${vac.CentroMedico}</div>
-                        <div style="font-size: 10px; color: #64748b;">Aplicado por: ${vac.NombreCompletoPersonal}</div>
+                        <div style="font-weight: 500;">${vac.CentroMedico}</div>
+                        <div style="font-size: 10px; color: #64748b; margin-top: 3px;">
+                            <span style="font-weight: bold;">Certificado por:</span> ${vac.NombreCompletoPersonal}
+                        </div>
                     </td>
                 </tr>
                 `).join('')}
             </tbody>
         </table>
         ` : `
-        <div style="padding: 20px; text-align: center; color: #64748b; background-color: #f8fafc; border-radius: 8px;">
-            Este paciente no tiene registros de vacunación aún.
+        <div style="padding: 40px; text-align: center; color: #64748b; background-color: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+            <div style="font-size: 18px; margin-bottom: 10px;">No se registran inmunizaciones aplicadas</div>
+            <p>Este paciente no presenta antecedentes de vacunación en el sistema nacional.</p>
         </div>
         `}
 
+        <div class="signatures-container">
+            <div class="signature-box">
+                <div class="signature-text" style="font-size: 24px;">Vacunas RD</div>
+                <div class="signature-line">
+                    <div style="font-weight: bold; font-size: 11px;">Dirección Nacional de Inmunización</div>
+                    <div style="font-size: 9px; color: #64748b;">Sello Digital Autorizado</div>
+                </div>
+                <div class="stamp">
+                    <div class="stamp-inner">
+                        <div>REPÚBLICA DOMINICANA</div>
+                        <div style="font-size: 10px; margin: 2px 0;">OFICIAL</div>
+                        <div>VACUNAS RD</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signature-box">
+                <div class="signature-text" style="font-size: 18px; top: 22px;">${vaccinationHistory.length > 0 ? vaccinationHistory[0].NombreCompletoPersonal : '---'}</div>
+                <div class="signature-line">
+                    <div style="font-weight: bold; font-size: 11px;">Firma del Personal de Salud</div>
+                    <div style="font-size: 9px; color: #64748b;">Médico / Enfermera Certificada</div>
+                </div>
+            </div>
+
+            <div class="signature-box">
+                <div class="signature-line" style="margin-top: 75px;">
+                    <div style="font-weight: bold; font-size: 11px;">Sello del Centro de Vacunación</div>
+                    <div style="font-size: 9px; color: #64748b;">${vaccinationHistory.length > 0 ? vaccinationHistory[0].CentroMedico : 'Establecimiento de Salud'}</div>
+                </div>
+                <div class="stamp" style="right: auto; left: -20px; opacity: 0.4; transform: rotate(10deg);">
+                    <div class="stamp-inner" style="border: 2px solid #1e3a8a;">
+                        <div>CENTRO AUTORIZADO</div>
+                        <div style="font-size: 7px; margin: 2px 0;">CONTROL DE CALIDAD</div>
+                        <div>DEPARTAMENTO PAI</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="footer">
-            <p>Este documento es un reporte generado electrónicamente. No requiere firma ni sello húmedo.</p>
-            <p>Generado por: ${req.user.role === 1 ? 'Administrador' : 'Personal Médico'} | ID de Referencia: ${Date.now()}</p>
+            <p>Este documento es un certificado oficial generado por el Sistema Nacional de Vacunación. La información contenida tiene carácter de declaración jurada y es válida para fines escolares, laborales y migratorios.</p>
+            <div class="security-code">
+                CÓDIGO DE VALIDACIÓN: DNI-${Date.now().toString(36).toUpperCase()} | ID: ${id_Nino} | FECHA: ${new Date().toISOString()}
+            </div>
         </div>
     </body>
     </html>

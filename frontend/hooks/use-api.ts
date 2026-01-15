@@ -33,7 +33,8 @@ const useApi = <T = any>() => {
         finalHeaders['Authorization'] = `Bearer ${token}`;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      /* 
       if (!apiUrl) {
         const errorMessage = "API URL is not configured. Please set NEXT_PUBLIC_API_URL in your environment variables.";
         console.error(errorMessage);
@@ -41,6 +42,7 @@ const useApi = <T = any>() => {
         setLoading(false);
         return;
       }
+      */
 
       try {
         const response = await fetch(`${apiUrl}${endpoint}`, {

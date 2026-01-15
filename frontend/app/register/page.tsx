@@ -42,8 +42,10 @@ export default function RegisterPage() {
     console.log("Starting registration process...", formData);
 
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
       // 1. Register User
-      const registerResponse = await fetch("http://localhost:3001/api/tutors", {
+      const registerResponse = await fetch(`${apiUrl}/api/tutors`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,7 +69,7 @@ export default function RegisterPage() {
 
       // 2. Auto Login
       console.log("Attempting auto-login with:", { LoginIdentifier: formData.Username });
-      const loginResponse = await fetch("http://localhost:3001/api/auth/login", {
+      const loginResponse = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

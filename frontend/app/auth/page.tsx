@@ -207,7 +207,8 @@ export default function AuthPage() {
         TipoIdentificacion: "Cédula",
       };
 
-      const response = await fetch("http://localhost:3001/api/tutors", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/tutors`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -227,7 +228,7 @@ export default function AuthPage() {
 
       // Auto-login logic
       try {
-        const loginResponse = await fetch("http://localhost:3001/api/auth/login", {
+        const loginResponse = await fetch(`${apiUrl}/api/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

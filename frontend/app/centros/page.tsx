@@ -37,7 +37,7 @@ interface SelectOption {
   label: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function CentrosPage() {
   const [centrosData, setCentrosData] = useState<Centro[]>([]);
@@ -150,8 +150,8 @@ export default function CentrosPage() {
   const filteredCentros = useMemo(() => {
     return centrosData.filter(centro => {
       return (
-        (searchTerm === '' || 
-          centro.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (searchTerm === '' ||
+          centro.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
           centro.direccion.toLowerCase().includes(searchTerm.toLowerCase())) &&
         (selectedProvince === '' || selectedProvince === '__ALL__' || centro.provincia === selectedProvince) &&
         (selectedType === '' || selectedType === '__ALL__' || centro.tipo === selectedType) &&
@@ -201,10 +201,10 @@ export default function CentrosPage() {
           <div>
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar</label>
             <div className="relative">
-              <Input 
-                type="text" 
-                id="search" 
-                placeholder="Nombre o dirección..." 
+              <Input
+                type="text"
+                id="search"
+                placeholder="Nombre o dirección..."
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -265,8 +265,8 @@ export default function CentrosPage() {
 
         {showMap ? (
           <div className="h-[500px] md:h-[600px] bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden shadow-lg">
-            <InteractiveMap 
-              centros={filteredCentros} 
+            <InteractiveMap
+              centros={filteredCentros}
               selectedCentroId={selectedCentro?.id}
               onCentroSelect={(id) => {
                 const centro = filteredCentros.find(c => c.id === id);
@@ -327,17 +327,17 @@ export default function CentrosPage() {
                 <MapPin className="w-4 h-4" /> {selectedCentro.direccion}
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="py-4 space-y-3 text-sm text-gray-700 dark:text-gray-300">
               <p><strong className="font-medium text-gray-800 dark:text-gray-100">Provincia:</strong> {selectedCentro.provincia}</p>
               <p><strong className="font-medium text-gray-800 dark:text-gray-100">Municipio:</strong> {selectedCentro.municipio}</p>
               <p><strong className="font-medium text-gray-800 dark:text-gray-100">Tipo de Centro:</strong> {selectedCentro.tipo}</p>
               <p className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <strong className="font-medium text-gray-800 dark:text-gray-100">Horarios:</strong> {selectedCentro.horarios}</p>
-              {selectedCentro.telefono && 
+              {selectedCentro.telefono &&
                 <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <strong className="font-medium text-gray-800 dark:text-gray-100">Teléfono:</strong> <a href={`tel:${selectedCentro.telefono}`} className="text-blue-600 hover:underline dark:text-blue-400">{selectedCentro.telefono}</a></p>}
-              {selectedCentro.email && 
+              {selectedCentro.email &&
                 <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <strong className="font-medium text-gray-800 dark:text-gray-100">Email:</strong> <a href={`mailto:${selectedCentro.email}`} className="text-blue-600 hover:underline dark:text-blue-400">{selectedCentro.email}</a></p>}
-              
+
               <div>
                 <strong className="font-medium text-gray-800 dark:text-gray-100">Servicios Disponibles:</strong>
                 <ul className="list-disc list-inside mt-1 space-y-1 pl-2">

@@ -35,15 +35,23 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // Enable CORS for frontend
-const allowedOrigins = /^http:\/\/(localhost|127\.0\.0\.1|(\d{1,3}\.){3}\d{1,3}):\d+$/;
+const allowedOrigins = [
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+  /^https:\/\/.*\.vercel\.app$/
+];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.test(origin)) {
+
+    const isAllowed = allowedOrigins.some(regex => regex.test(origin));
+
+    if (isAllowed) {
       return callback(null, true);
     } else {
+      console.warn(`[CORS] Rejected origin: ${origin}`);
       return callback(new Error('Not allowed by CORS'));
     }
   },

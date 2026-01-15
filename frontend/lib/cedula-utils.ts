@@ -87,9 +87,8 @@ export async function validarCedulaEnAPI(cedula: string): Promise<ValidationResu
     try {
         const cedulaLimpia = cedula.replace(/-/g, "");
         // Construir la URL de forma robusta
-        let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
-        // Asegurar que no termine en slash
-        baseUrl = baseUrl.replace(/\/$/, "");
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const baseUrl = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl.replace(/\/$/, '')}/api`;
 
         console.log(`[FRONTEND] Validando cédula via proxy en: ${baseUrl}/cedula/validate`);
 

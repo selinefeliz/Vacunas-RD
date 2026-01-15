@@ -194,7 +194,7 @@ export default function NewAppointmentPage() {
                   required={appointmentFor === "child"}
                   disabled={!!searchParams.get('childId')}
                 >
-                  <SelectTrigger className={!!searchParams.get('childId') ? "bg-gray-50 opacity-100 cursor-not-allowed" : ""}>
+                  <SelectTrigger className={!!searchParams.get('childId') ? "bg-muted opacity-100 cursor-not-allowed text-foreground" : ""}>
                     <SelectValue placeholder="Seleccione un niño" />
                   </SelectTrigger>
                   <SelectContent>
