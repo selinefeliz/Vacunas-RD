@@ -1,110 +1,120 @@
-# Sistema de Gestión de Vacunación
+# <p align="center">📦 Vacunas RD: Sistema Nacional de Inmunización</p>
 
-Este proyecto es un sistema integral para la gestión de campañas de vacunación. Permite administrar citas, inventario de vacunas, centros de vacunación, pacientes y personal médico. La aplicación cuenta con un portal web para pacientes y un panel de administración para el personal autorizado.
-
-## Creadores
-
-*   ISMAEL MOQUETE EDUARDO - 1115719
-*   KATRIEL CASTILLO - 1121299
-*   YOBANNY VELEZ - 1117551
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Production--Ready-success?style=for-the-badge&logo=vercel" alt="Status">
+  <img src="https://img.shields.io/badge/Infrastructure-Azure--SQL-blue?style=for-the-badge&logo=microsoftazure" alt="Infrastructure">
+  <img src="https://img.shields.io/badge/Architecture-Clean--DevOps-orange?style=for-the-badge&logo=github-actions" alt="DevOps">
+</p>
 
 ---
 
-## Stack Tecnológico
+### <p align="center">🚀 Una solución integral para la gestión de salud pública impulsada por una metodología DevOps de vanguardia.</p>
 
-El sistema está construido con una arquitectura moderna de tres capas:
-
-*   **Frontend**: Desarrollado con **Next.js (React)** y **TypeScript**. La interfaz de usuario es moderna y responsiva, utilizando **Tailwind CSS** y la librería de componentes **Shadcn/UI**.
-*   **Backend**: Una API RESTful robusta construida con **Node.js** y el framework **Express.js**. Se encarga de toda la lógica de negocio y la comunicación con la base de datos.
-*   **Base de Datos**: Utiliza **Microsoft SQL Server** para el almacenamiento persistente de datos. La lógica de negocio compleja se maneja a través de procedimientos almacenados (`Stored Procedures`) para optimizar el rendimiento y la seguridad.
+Este proyecto transforma la gestión de campañas de inmunización en un proceso digital eficiente, seguro y altamente escalable. No es solo una aplicación; es un ecosistema diseñado para administrar el ciclo completo de vacunación: desde el inventario en el centro hasta el carné digital en el bolsillo del ciudadano.
 
 ---
 
-## Funcionalidades Principales
+## 🛠️ Stack Tecnológico de Alto Rendimiento
 
-El sistema ofrece una amplia gama de funcionalidades para diferentes roles de usuario:
-
-### Gestión de Autenticación y Usuarios
-*   Registro e inicio de sesión de usuarios.
-*   Gestión de roles y permisos (Administrador, Personal Médico, Paciente).
-*   Protección de rutas y endpoints basada en roles.
-
-### Gestión de Citas
-*   Solicitud de citas de vacunación por parte de los pacientes.
-*   Consulta y cancelación de citas.
-*   Asignación y gestión de citas por parte del personal médico.
-*   Visualización de la disponibilidad de horarios en los centros de vacunación.
-
-### Administración de Vacunas e Inventario
-*   Catálogo de vacunas disponibles.
-*   Gestión de lotes de vacunas, incluyendo fabricante y fecha de caducidad.
-*   Control de inventario de vacunas por centro de vacunación.
-
-### Administración de Centros de Vacunación
-*   Gestión de centros de vacunación y sus ubicaciones.
-*   Asignación de personal médico a los centros.
-
-### Módulo Médico
-*   Registro de pacientes (incluyendo información de menores).
-*   Administración del historial de vacunación de los pacientes.
-*   Panel para que el personal médico atienda las citas programadas.
-
-### Dashboard
-*   Visualización de estadísticas y métricas clave sobre la campaña de vacunación.
+| Capa | Tecnologías |
+| :--- | :--- |
+| **Frontend** | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind--CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) |
+| **Backend** | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white) ![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white) ![Puppeteer](https://img.shields.io/badge/Puppeteer-40B5A4?style=flat-square&logo=puppeteer&logoColor=white) |
+| **Database** | ![Azure SQL](https://img.shields.io/badge/Azure--SQL-008AD7?style=flat-square&logo=microsoft-azure&logoColor=white) ![MS SQL Server](https://img.shields.io/badge/SQL--Server-CC2927?style=flat-square&logo=microsoft-sql-server&logoColor=white) |
+| **DevOps** | ![Git](https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white) ![CI/CD](https://img.shields.io/badge/CI/CD-Loop-success?style=flat-square&logo=github-actions&logoColor=white) |
 
 ---
 
-## Estructura del Proyecto
+## ♾️ Metodología DevOps Aplicada
 
-El repositorio está organizado en los siguientes directorios principales:
+Este proyecto fue concebido bajo el paradigma de **Integración Continua y Entrega Continua (CI/CD)**. Aplicamos los principios de DevOps para garantizar que cada cambio en el código pase por un proceso estricto de calidad antes de llegar al ciudadano.
 
-*   `frontend/`: Contiene todo el código fuente de la aplicación web de Next.js.
-    *   `app/`: Las páginas y rutas de la aplicación.
-    *   `components/`: Componentes reutilizables de React.
-    *   `lib/`: Funciones de utilidad y configuración.
-    *   `styles/`: Hojas de estilo globales.
-*   `api/`: Contiene el código fuente del servidor de backend (Node.js/Express).
-    *   `routes/`: Define los endpoints de la API.
-    *   `middleware/`: Middlewares para la gestión de peticiones (ej. autenticación).
-    *   `config/`: Archivos de configuración.
-*   `database/`: Contiene los scripts SQL para la base de datos.
-    *   `schema.sql`: Script para la creación de la estructura de la base de datos (tablas, relaciones).
-    *   `programmability/`: Todos los procedimientos almacenados del sistema.
+### Ciclo de Vida del Proyecto
+```mermaid
+graph LR
+    A[Plan] --> B(Code)
+    B --> C(Build)
+    C --> D(Test)
+    D --> E(Release)
+    E --> F(Deploy)
+    F --> G(Operate)
+    G --> H(Monitor)
+    H --> A
+    style B fill:#3b82f6,stroke:#1e40af,color:#fff
+    style F fill:#10b981,stroke:#065f46,color:#fff
+    style D fill:#f59e0b,stroke:#b45309,color:#fff
+```
 
----
-
-## Guía de Instalación y Puesta en Marcha
-
-Sigue estos pasos para configurar y ejecutar el proyecto en un entorno de desarrollo local.
-
-### Prerrequisitos
-*   **Node.js** (versión 20.x o superior)
-*   **npm** o un gestor de paquetes compatible.
-*   **Microsoft SQL Server** (una instancia local o en la nube).
-
-### 1. Configuración de la Base de Datos
-1.  Se configura sola al ejecutar en backend ya que esta en azure. PARA LOS CAMBIOS EN LA BD VE A AZURE O CONECTATE A LA CONEXION EN SQL SERVER CON LA BD Y EJECUTA LOS NUEEVOS SCRIPT
-### 2. Configuración del Backend (API)
-1.  Navega al directorio `backend/`: `cd backend`
-2.  Instala las dependencias: `npm install`
-5.  Inicia el servidor: `npm start`
-    *   Por defecto, la API se ejecutará en `http://localhost:3000`.
-
-### 3. Configuración del Frontend
-1.  En otra terminal, navega al directorio `frontend/`: `cd frontend`
-2. En la carpeta hay un archivo .bat llamado `instalar`, ejecutalo para que descarge las dependencias
-4.  Instala las dependencias: `npm install` 
-5.  Inicia la aplicación de desarrollo: `npm run dev` o selecciona el documenrto llamado Iniciar
-    *   La aplicación web estará disponible en `http://localhost:3003`.
+### Características DevOps Implementadas:
+*   **Infrastructure as Code (IaC)**: Definición de servicios en la nube (Azure/Vercel) integrada en el repositorio.
+*   **Cloud Hybrid Connectivity**: Backend en Vercel conectado de forma segura a una instancia persistente de Azure SQL.
+*   **Automation**: Generación automática de certificados oficiales PDF utilizando Puppeteer Cloud-Optimized.
+*   **Version Control**: Gestión de ramas para control de cambios dinámicos.
 
 ---
 
-## Scripts Disponibles
+## ✨ Funcionalidades Estrella
 
-### Frontend (`/frontend`)
-*   `npm run dev`: Inicia el servidor de desarrollo.
-*   `npm run build`: Compila la aplicación para producción.
-*   `npm run start`: Inicia un servidor de producción.
+### 🏛️ Para Instituciones (Admin/Médicos)
+*   **Control de Lotes**: Gestión inteligente de inventario con alertas de caducidad.
+*   **Agenda Digital**: Sistema de citas con validación de horarios en tiempo real.
+*   **Certificación Oficial**: Generación de carnes con marca de agua y sellos digitales de seguridad.
 
-### Backend (`/api`)
-*   `npm start`: Inicia el servidor de la API.
+### 👤 Para Ciudadanos (Pacientes)
+*   **Perfil de Vacunación**: Acceso inmediato al historial completo de dosis aplicadas.
+*   **Validación de Cédula**: Integración con algoritmos de validación de identidad dominicana.
+*   **Responsive Web**: Diseñado para funcionar perfectamente desde un smartphone en el centro de vacunación.
+
+---
+
+## 🏛️ Arquitectura del Sistema
+
+```mermaid
+sequenceDiagram
+    participant Ciudadano
+    participant Frontend (Next.js)
+    participant Backend (Node.js)
+    participant AzureSQL (DB)
+
+    Ciudadano->>Frontend: Solicita Historial
+    Frontend->>Backend: API Request + JWT
+    Backend->>AzureSQL: EXEC usp_GetPatientHistory
+    AzureSQL-->>Backend: Data Set (Dosis/Lotes)
+    Backend->>Backend: Generates Official PDF (Puppeteer)
+    Backend-->>Frontend: Stream PDF Blob
+    Frontend-->>Ciudadano: Descarga Carné Digital
+```
+
+---
+
+## 🚀 Guía de Instalación Rápida
+
+### Entorno Local
+1.  **Clonar y Dependencias**:
+    ```bash
+    git clone https://github.com/selinefeliz/Vacunas-RD.git
+    npm install # En carpetas frontend y backend
+    ```
+2.  **Configurar Variables (.env)**:
+    Asegúrate de configurar `DB_SERVER`, `DB_USER` y `DATABASE` para apuntar a tu instancia de Azure SQL.
+
+3.  **Encender Motores**:
+    ```bash
+    # En Backend
+    npm start
+    # En Frontend
+    npm run dev
+    ```
+
+---
+
+## 👥 Equipo de Desarrollo
+*   **Ismael Moquete Eduardo** (1115719)
+*   **Katriel Castillo** (1121299)
+*   **Yobanny Velez** (1117551)
+
+---
+
+<p align="center">
+  Hecho con ❤️ para la salud de la República Dominicana.
+</p>
