@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
-    console.log(`[AUTH MIDDLEWARE] verifyToken called for: ${req.method} ${req.originalUrl}`); // <-- ADD THIS LOG
+
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -28,14 +28,14 @@ const checkRole = (requiredRoleIds) => {
         const userRoleId = req.user.id_Rol;
 
         if (!Array.isArray(requiredRoleIds) || requiredRoleIds.some(isNaN)) {
-             console.error('Authorization Error: checkRole requires an array of numeric role IDs.');
-             return res.status(500).send({ message: 'Server configuration error in role-checking.' });
+            console.error('Authorization Error: checkRole requires an array of numeric role IDs.');
+            return res.status(500).send({ message: 'Server configuration error in role-checking.' });
         }
 
         if (requiredRoleIds.includes(userRoleId)) {
             next();
         } else {
-            res.status(403).send({ 
+            res.status(403).send({
                 message: `Forbidden: You do not have the required permissions to access this resource. Required role IDs: ${requiredRoleIds.join(', ')}`
             });
         }

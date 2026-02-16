@@ -19,17 +19,46 @@ router.get('/vaccines', verifyToken, async (req, res) => {
     }
 });
 
+const { validateEmail, validateCedula, validateLength, validateDateRange, validatePhone } = require('../utils/validation');
+
 // --- Tutor Endpoints ---
 // POST /api/tutors - Register a new Tutor and associated User with a hashed password
 router.post('/tutors', async (req, res) => {
-    console.log(`[ROUTE HANDLER] POST /api/tutors reached in other.js`); // <-- ADD THIS LOG
-    console.log(`Accessed POST /api/tutors with body: ${JSON.stringify(req.body)}`);
+    console.log(`[ROUTE HANDLER] POST /api/tutors reached in other.js`);
 
     const { Nombres, Apellidos, TipoIdentificacion, NumeroIdentificacion, Telefono, Direccion, Email, Username, FechaNacimiento } = req.body;
     const password = req.body.Password || req.body.password;
 
     if (!Nombres || !Apellidos || !NumeroIdentificacion || !Email || !password || !Username) {
         return res.status(400).json({ message: 'Missing required fields.' });
+    }
+
+    if (!validateCedula(NumeroIdentificacion)) {
+        return res.status(400).json({ message: 'Formato de Identificación (Cédula) inválido.' });
+    }
+
+    if (!validateEmail(Email)) {
+        return res.status(400).json({ message: 'Formato de Email inválido.' });
+    }
+
+    if (Telefono && !validatePhone(Telefono)) {
+        return res.status(400).json({ message: 'Formato de teléfono inválido. Debe tener 10 dígitos.' });
+    }
+
+    if (FechaNacimiento && !validateDateRange(FechaNacimiento, 1920, 2010)) {
+        return res.status(400).json({ message: 'Fecha de nacimiento fuera de rango para un tutor.' });
+    }
+
+    if (!validateLength(Nombres, 2, 100) || !validateLength(Apellidos, 2, 100)) {
+        return res.status(400).json({ message: 'Nombres y Apellidos deben tener entre 2 y 100 caracteres.' });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{12,}$/;
+
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+            message: 'La contraseña debe tener al menos 12 caracteres, incluir mayúsculas, minúsculas, números y caracteres especiales.'
+        });
     }
 
     try {

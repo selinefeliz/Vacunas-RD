@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
+import { formatearTelefono, validatePhone } from "@/lib/utils"
+import { formatearCedula } from "@/lib/cedula-utils"
+
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
@@ -36,10 +39,56 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formatted = formatearTelefono(value);
+    setFormData((prev) => ({ ...prev, Telefono: formatted }));
+  };
+
+  const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formatted = formatearCedula(value);
+    setFormData((prev) => ({ ...prev, NumeroIdentificacion: formatted }));
+  };
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    console.log("Starting registration process...", formData);
+    console.log("Starting registration process...");
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{12,}$/;
+    if (!passwordRegex.test(formData.Password)) {
+      toast({
+        variant: "destructive",
+        title: "Contraseña débil",
+        description: "La contraseña debe tener al menos 12 caracteres, incluir mayúsculas, minúsculas, números y caracteres especiales.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!validatePhone(formData.Telefono)) {
+      toast({
+        variant: "destructive",
+        title: "Teléfono inválido",
+        description: "El teléfono debe tener 10 dígitos.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    const cedulaLimpia = formData.NumeroIdentificacion.replace(/-/g, "");
+    if (cedulaLimpia.length !== 11) {
+      toast({
+        variant: "destructive",
+        title: "Cédula inválida",
+        description: "La cédula debe tener 11 dígitos.",
+      });
+      setLoading(false);
+      return;
+    }
+
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -137,11 +186,14 @@ export default function RegisterPage() {
               <Input
                 id="NumeroIdentificacion"
                 name="NumeroIdentificacion"
+                placeholder="000-0000000-0"
                 value={formData.NumeroIdentificacion}
-                onChange={handleChange}
+                onChange={handleCedulaChange}
                 required
+                maxLength={13}
               />
             </div>
+
           </div>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -171,8 +223,17 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="Telefono">Teléfono</Label>
-              <Input id="Telefono" name="Telefono" value={formData.Telefono} onChange={handleChange} required />
+              <Input
+                id="Telefono"
+                name="Telefono"
+                placeholder="(809) 000-0000"
+                value={formData.Telefono}
+                onChange={handlePhoneChange}
+                required
+                maxLength={14}
+              />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="Direccion">Dirección</Label>
               <Input id="Direccion" name="Direccion" value={formData.Direccion} onChange={handleChange} required />

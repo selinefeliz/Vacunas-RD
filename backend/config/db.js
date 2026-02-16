@@ -5,8 +5,8 @@ require("dotenv").config();
 const config = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  server: process.env.DB_SERVER || "micolmado-server.database.windows.net",
-  database: process.env.DB_DATABASE || "SistemaVacunacionDB",
+  server: process.env.DB_SERVER,
+  database: process.env.DB_DATABASE,
   options: {
     encrypt: true, // DEBE SER TRUE PARA AZURE
     trustServerCertificate: false, // FALSE PARA PRODUCCIÓN/AZURE
@@ -35,7 +35,6 @@ if (process.env.DB_OPTIONS_INTEGRATED_SECURITY === "true") {
     type: "default"
   };
   console.log("[DB CONFIG] 🔐 Usando SQL Server Authentication");
-  console.log(`[DB CONFIG] 👤 Usuario: ${process.env.DB_USER}`);
 } else {
   console.warn("[DB CONFIG] ⚠️ No se especificó método de autenticación. Usando Windows Authentication por defecto.");
   config.authentication = {
@@ -48,11 +47,6 @@ if (process.env.DB_OPTIONS_INTEGRATED_SECURITY === "true") {
   };
 }
 
-console.log(`[DB CONFIG] 🖥️  Servidor: ${config.server}`);
-console.log(`[DB CONFIG] �️  Base de datos: ${config.database}`);
-console.log(`[DB CONFIG] 🔒 Encrypt: ${config.options.encrypt}`);
-console.log(`[DB CONFIG] � TrustServerCertificate: ${config.options.trustServerCertificate}`);
-
 let pool;
 
 const connectDB = async () => {
@@ -63,18 +57,12 @@ const connectDB = async () => {
 
     console.log("[DB SUCCESS] ✅ ¡Conectado exitosamente a SQL Server!");
 
-    // Probar una consulta simple para verificar
-    const testResult = await pool.request().query("SELECT @@VERSION as version, DB_NAME() as dbname");
-    console.log(`[DB INFO] 📊 Base de datos activa: ${testResult.recordset[0].dbname}`);
-    console.log(`[DB INFO] 📊 Versión: ${testResult.recordset[0].version.substring(0, 80)}...`);
-
 
     return pool;
   } catch (err) {
     console.error("[DB ERROR] ❌ Error de conexión a la base de datos:");
     console.error(`[DB ERROR] 💥 Mensaje: ${err.message}`);
-    console.error(`[DB ERROR] 🔍 Servidor intentado: ${config.server}`);
-    console.error(`[DB ERROR] 🔍 Base de datos: ${config.database}`);
+
 
     if (err.message.includes("ENOTFOUND") || err.message.includes("getaddrinfo")) {
       console.error("\n[DB HELP] 💡 SOLUCIÓN:");
@@ -105,7 +93,7 @@ const closeDB = async () => {
     try {
       await pool.close();
       pool = null;
-      console.log("[DB INFO] 🔒 Conexión cerrada correctamente");
+      console.log("[DB INFO]  Conexión cerrada correctamente");
     } catch (err) {
       console.error("[DB ERROR] Error cerrando conexión:", err.message);
     }

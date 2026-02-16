@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, PlusCircle, XCircle } from "lucide-react"
+import { formatearCedula } from "@/lib/cedula-utils"
+
 
 const formSchema = z.object({
     Cedula_Usuario: z.string().min(1, "Cédula es requerida"),
@@ -224,10 +226,18 @@ export function EditAdminUserForm({ userId, onSuccess }: EditAdminUserFormProps)
                         <FormItem>
                             <FormLabel>Cédula</FormLabel>
                             <FormControl>
-                                <Input {...field} />
+                                <Input
+                                    {...field}
+                                    onChange={(e) => {
+                                        const formatted = formatearCedula(e.target.value);
+                                        field.onChange(formatted);
+                                    }}
+                                    maxLength={13}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
+
                     )}
                 />
                 <FormField

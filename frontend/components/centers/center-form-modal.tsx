@@ -13,6 +13,8 @@ import useApi from "@/hooks/use-api";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { formatearTelefono } from "@/lib/utils";
+
 
 // Interfaces for API data
 interface Province {
@@ -40,11 +42,14 @@ const formSchema = z.object({
   Direccion: z.string().min(5, { message: "La dirección es requerida." }),
   id_Provincia: z.string().min(1, { message: "Debe seleccionar una provincia." }),
   id_Municipio: z.string().min(1, { message: "Debe seleccionar un municipio." }),
-  Telefono: z.string().min(8, { message: "El teléfono debe ser válido." }).optional().or(z.literal('')),
+  Telefono: z.string()
+    .refine(val => val.replace(/\D/g, '').length === 10, { message: "El teléfono debe tener 10 dígitos." })
+    .optional().or(z.literal('')),
   URLGoogleMaps: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal('')),
   Capacidad: z.coerce.number().int().positive({ message: "La capacidad debe ser un número positivo." }),
   id_Estado: z.coerce.number().positive({ message: "Debe seleccionar un estado." }),
 });
+
 
 const defaultValues = {
   Nombre: "",
@@ -270,9 +275,30 @@ export const CenterFormModal = ({ open, onOpenChange, center, onFormSubmit }: Ce
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="Telefono" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input placeholder="Ej: 809-555-1234" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField
+                  control={form.control}
+                  name="Telefono"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teléfono</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="(809) 000-0000"
+                          {...field}
+                          onChange={(e) => {
+                            const formatted = formatearTelefono(e.target.value);
+                            field.onChange(formatted);
+                          }}
+                          maxLength={14}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField control={form.control} name="URLGoogleMaps" render={({ field }) => (<FormItem><FormLabel>URL de Google Maps</FormLabel><FormControl><Input placeholder="https://maps.app.goo.gl/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="Capacidad" render={({ field }) => (<FormItem><FormLabel>Capacidad</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="id_Estado" render={({ field }) => (<FormItem><FormLabel>Estado</FormLabel><Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl><SelectContent>{statuses.map(s => <SelectItem key={s.id_Estado} value={String(s.id_Estado)}>{s.NombreEstado}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />

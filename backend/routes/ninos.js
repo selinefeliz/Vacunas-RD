@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, connectDB } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
+const { validateDateRange, validateLength } = require('../utils/validation');
 
 // --- Specific Routes First ---
 
@@ -17,6 +18,7 @@ router.get('/find', [verifyToken, checkRole([1, 2, 3])], async (req, res) => {
 
         const pool = await connectDB();
         const request = pool.request();
+        //Asegura que la base de datos lo interpretará literalmente como un texto que busca un niño llama
         request.input('searchTerm', sql.NVarChar(100), searchTerm);
 
         let query = `
@@ -61,6 +63,7 @@ router.get('/find', [verifyToken, checkRole([1, 2, 3])], async (req, res) => {
     }
 });
 
+
 // POST / - Register a new child
 router.post('/', [verifyToken, checkRole([5, 1])], async (req, res) => {
     try {
@@ -68,7 +71,23 @@ router.post('/', [verifyToken, checkRole([5, 1])], async (req, res) => {
         const id_Usuario = req.user.id; // Get user ID from authenticated user
 
         console.log('[NINOS] POST / - Starting registration for user:', id_Usuario);
-        console.log('[NINOS] Body data:', { Nombres, Apellidos, Genero, FechaNacimiento, DireccionResidencia });
+
+        // --- Validation ---
+        if (!Nombres || !Apellidos || !Genero || !FechaNacimiento) {
+            return res.status(400).send({ message: 'Faltan campos obligatorios.' });
+        }
+
+        if (!validateLength(Nombres, 2, 100) || !validateLength(Apellidos, 2, 100)) {
+            return res.status(400).send({ message: 'Nombres y Apellidos deben tener entre 2 y 100 caracteres.' });
+        }
+
+        if (!validateDateRange(FechaNacimiento, 2000, new Date().getFullYear())) {
+            return res.status(400).send({ message: 'Fecha de nacimiento fuera de rango permitido.' });
+        }
+
+        if (Genero !== 'M' && Genero !== 'F') {
+            return res.status(400).send({ message: 'Género debe ser M o F.' });
+        }
 
         const pool = await connectDB();
         if (!pool) {

@@ -50,7 +50,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      console.log(`[LoginPage] Attempting login with Email/Cedula: '${email}', Password: '${password}'`);
+      console.log(`[LoginPage] Attempting login...`);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',

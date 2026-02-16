@@ -1,6 +1,7 @@
 const express = require('express');
 const { sql, poolPromise } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
+const { validatePhone } = require('../utils/validation');
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', verifyToken, async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request().execute('usp_GetAllVaccinationCenters');
 
-    console.log('Raw data from DB:', JSON.stringify(result.recordset, null, 2));
+
 
     // Map database columns to frontend-friendly keys to avoid breaking the client
     const centers = result.recordset.map(center => ({
@@ -53,6 +54,11 @@ router.post('/', [verifyToken, checkRole([1])], async (req, res) => {
       Telefono, URLGoogleMaps, Capacidad, id_Estado
     } = req.body;
 
+    if (Telefono && !validatePhone(Telefono)) {
+      return res.status(400).json({ message: 'Formato de teléfono inválido (10 dígitos requeridos).' });
+    }
+
+
     const pool = await poolPromise;
     await pool.request()
       .input('NombreCentro', sql.NVarChar, Nombre)
@@ -81,6 +87,11 @@ router.put('/:id', [verifyToken, checkRole([1])], async (req, res) => {
       Nombre, Director, Direccion, id_Provincia, id_Municipio,
       Telefono, URLGoogleMaps, Capacidad, id_Estado
     } = req.body;
+
+    if (Telefono && !validatePhone(Telefono)) {
+      return res.status(400).json({ message: 'Formato de teléfono inválido (10 dígitos requeridos).' });
+    }
+
 
     const pool = await poolPromise;
     await pool.request()

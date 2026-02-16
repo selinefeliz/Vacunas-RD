@@ -1,6 +1,7 @@
 const express = require('express');
 const { sql, poolPromise } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
+const { validateDateRange } = require('../utils/validation');
 
 const router = express.Router();
 
@@ -76,6 +77,19 @@ router.post('/', verifyToken, async (req, res) => {
         if (!id_CentroVacunacion || !id_Vacuna || !Fecha || !Hora) {
             return res.status(400).json({ message: 'Faltan campos requeridos para la cita.' });
         }
+
+        const appointmentDate = new Date(Fecha);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (appointmentDate < today) {
+            return res.status(400).json({ message: 'La fecha de la cita no puede ser en el pasado.' });
+        }
+
+        if (!validateDateRange(Fecha, today.getFullYear(), today.getFullYear() + 2)) {
+            return res.status(400).json({ message: 'Fecha de cita fuera de rango permitido.' });
+        }
+
 
         // Validate time format HH:MM
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;

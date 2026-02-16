@@ -7,7 +7,9 @@ const cors = require('cors');
 const sql = require('mssql');
 require('dotenv').config();
 const { verifyToken, checkRole } = require('./middleware/authMiddleware');
-const { poolPromise } = require('./config/db'); // Import poolConnect
+const { poolPromise } = require('./config/db');
+const { globalSanitize, utf8Middleware } = require('./middleware/validationMiddleware');
+// Import poolConnect
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -60,12 +62,15 @@ app.use(cors({
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+app.use(utf8Middleware); // Set UTF-8
+app.use(globalSanitize); // Sanitize null bytes, traversal, etc.
 
-// --- Request Logger Middleware ---
-app.use((req, res, next) => {
-  console.log(`[API IN] ${req.method} ${req.originalUrl}`);
-  next();
-});
+// Request logging is disabled for security/privacy.
+// app.use((req, res, next) => {
+//   console.log(`[API IN] ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
 
 // --- API ROUTES ---
 app.use('/api/cedula', cedulaRoutes);

@@ -20,6 +20,8 @@ import { useToast } from "@/components/ui/use-toast"
 
 import { Shield, Eye, EyeOff, ArrowLeft, User, Mail, Phone, Calendar, MapPin, Loader2, Home, KeyRound, CheckCircle2, AlertCircle } from "lucide-react"
 import { formatearCedula, validarCedulaEnAPI, type ValidationResult } from "@/lib/cedula-utils"
+import { formatearTelefono, validatePhone } from "@/lib/utils"
+
 
 export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false) // Used for login password visibility
@@ -131,6 +133,12 @@ export default function AuthPage() {
     }
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatearTelefono(e.target.value);
+    setRegisterFormData(prev => ({ ...prev, Telefono: formatted }));
+  };
+
+
   // Manejar cambio en identificador de login (Cédula o Email)
   const handleLoginIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -194,7 +202,13 @@ export default function AuthPage() {
       return;
     }
 
+    if (!validatePhone(registerFormData.Telefono)) {
+      setRegisterError("El teléfono debe tener 10 dígitos.");
+      return;
+    }
+
     if (registerFormData.Password !== registerConfirmPassword) {
+
       setRegisterError("Las contraseñas no coinciden.");
       return;
     }
@@ -531,9 +545,20 @@ export default function AuthPage() {
                       <Label htmlFor="Telefono" className="text-gray-700 dark:text-gray-300">Teléfono</Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input id="Telefono" name="Telefono" type="tel" placeholder="(809) 000-0000" value={registerFormData.Telefono} onChange={handleRegisterChange} required className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        <Input
+                          id="Telefono"
+                          name="Telefono"
+                          type="tel"
+                          placeholder="(809) 000-0000"
+                          value={registerFormData.Telefono}
+                          onChange={handlePhoneChange}
+                          required
+                          maxLength={14}
+                          className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                        />
                       </div>
                     </div>
+
 
                     <div className="space-y-2">
                       <Label htmlFor="Direccion" className="text-gray-700 dark:text-gray-300">Dirección</Label>

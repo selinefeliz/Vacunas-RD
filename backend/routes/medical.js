@@ -2,6 +2,7 @@ const express = require("express")
 const router = express.Router()
 const { sql, poolPromise } = require("../config/db")
 const { verifyToken, checkRole } = require("../middleware/authMiddleware")
+const { validateDateRange } = require("../utils/validation")
 
 // GET /api/medical/appointments - Obtener citas médicas para el usuario autenticado (médico o personal del centro)
 router.get("/appointments", [verifyToken, checkRole([2, 3, 5, 6])], async (req, res) => {
@@ -97,6 +98,10 @@ router.post("/create-patient-history", async (req, res) => {
     // We relaxed the requirement for id_Usuario (Tutor ID) in the SP, so we don't enforce it here strictly if id_Nino is present
     if (!id_Nino || !FechaNacimiento) {
       return res.status(400).json({ error: "id_Nino y FechaNacimiento son requeridos" })
+    }
+
+    if (!validateDateRange(FechaNacimiento, 1900)) {
+      return res.status(400).json({ message: 'Fecha de nacimiento inválida.' });
     }
 
     const pool = await poolPromise

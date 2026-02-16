@@ -2,11 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/db');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
+const { validateVaccinationDate } = require('../utils/validation');
 
 // POST / - Record a new vaccination
 router.post('/', [verifyToken, checkRole([2, 3])], async (req, res) => {
     try {
         const { id_Cita, id_LoteVacuna, FechaAplicacion, EdadAlVacunar, id_PersonalSalud, Observaciones } = req.body;
+
+        if (FechaAplicacion && !validateVaccinationDate(FechaAplicacion)) {
+            return res.status(400).json({ message: 'Fecha de aplicación inválida (no puede ser en el futuro).' });
+        }
+
         const pool = await poolPromise;
         const request = pool.request()
             .input('id_Cita', sql.Int, id_Cita)

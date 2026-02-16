@@ -6,6 +6,8 @@ const { logAudit } = require('../utils/audit');
 
 const router = express.Router();
 
+const { validateEmail, validateCedula, validateLength } = require('../utils/validation');
+
 // POST /api/users - Create a new user (Rebuilt for robustness)
 router.post('/', async (req, res) => {
     try {
@@ -14,6 +16,22 @@ router.post('/', async (req, res) => {
         // --- 1. Validate Presence of Core Fields ---
         if (!id_Rol || !Cedula_Usuario || !Email || !Clave || !Nombre || !Apellido) {
             return res.status(400).json({ message: 'Role, Cedula, Email, Password, Nombre, and Apellido are required fields.' });
+        }
+
+        if (!validateCedula(Cedula_Usuario)) {
+            return res.status(400).json({ message: 'Formato de Cédula inválido.' });
+        }
+
+        if (!validateEmail(Email)) {
+            return res.status(400).json({ message: 'Formato de Email inválido.' });
+        }
+
+        if (!validateLength(Nombre, 2, 50) || !validateLength(Apellido, 2, 50)) {
+            return res.status(400).json({ message: 'Nombre y Apellido deben tener entre 2 y 50 caracteres.' });
+        }
+
+        if (Clave.length < 12) {
+            return res.status(400).json({ message: 'Password must be at least 12 characters long for security purposes.' });
         }
 
         // --- 2. Sanitize and Validate Data Types ---
@@ -121,6 +139,16 @@ router.put('/:id', [verifyToken, checkRole([1])], async (req, res) => {
         const { id } = req.params;
         const { id_Rol, id_Estado, Cedula_Usuario, Email, id_CentroVacunacion, additionalCenters, Nombre, Apellido } = req.body;
 
+        if (Cedula_Usuario && !validateCedula(Cedula_Usuario)) {
+            return res.status(400).json({ message: 'Formato de Cédula inválido.' });
+        }
+        if (Email && !validateEmail(Email)) {
+            return res.status(400).json({ message: 'Formato de Email inválido.' });
+        }
+        if ((Nombre && !validateLength(Nombre, 2, 50)) || (Apellido && !validateLength(Apellido, 2, 50))) {
+            return res.status(400).json({ message: 'Nombre y Apellido deben tener entre 2 y 50 caracteres.' });
+        }
+
         const numericRoleId = parseInt(id_Rol, 10);
         let finalCenterId = null;
         if (id_CentroVacunacion != null && id_CentroVacunacion !== '') {
@@ -202,9 +230,26 @@ router.post('/admin-create', [verifyToken, checkRole([1])], async (req, res) => 
             return res.status(400).json({ message: 'Role, Cedula, Nombre, Apellido, Email, and Password are required fields.' });
         }
 
+        if (!validateCedula(Cedula_Usuario)) {
+            return res.status(400).json({ message: 'Formato de Cédula inválido.' });
+        }
+        if (!validateEmail(Email)) {
+            return res.status(400).json({ message: 'Formato de Email inválido.' });
+        }
+        if (!validateLength(Nombre, 2, 50) || !validateLength(Apellido, 2, 50)) {
+            return res.status(400).json({ message: 'Nombre y Apellido deben tener entre 2 y 50 caracteres.' });
+        }
+
         const numericRoleId = parseInt(id_Rol, 10);
         if (isNaN(numericRoleId)) {
             return res.status(400).json({ message: 'Role ID must be a valid number.' });
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{12,}$/;
+        if (!passwordRegex.test(Clave)) {
+            return res.status(400).json({
+                message: 'La contraseña debe tener al menos 12 caracteres, incluir mayúsculas, minúsculas, números y caracteres especiales.'
+            });
         }
 
         let finalCenterId = null;
